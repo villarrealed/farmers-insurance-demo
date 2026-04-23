@@ -5,27 +5,116 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>IMI Chat Widget Test</title>
 <style>
-  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f2f2f7; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
-  .card { background: #fff; border-radius: 16px; padding: 32px; max-width: 480px; width: 90%; box-shadow: 0 4px 20px rgba(0,0,0,.1); text-align: center; }
-  h1 { font-size: 20px; color: #1c1c1e; margin-bottom: 8px; }
-  p { font-size: 14px; color: #8e8e93; margin-bottom: 24px; line-height: 1.5; }
-  button { background: linear-gradient(135deg,#049fd9,#005cde); color: #fff; border: none; border-radius: 12px; padding: 12px 28px; font-size: 16px; font-weight: 600; cursor: pointer; }
-  .status { margin-top: 16px; font-size: 12px; color: #8e8e93; }
-  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #ff3b30; margin-right: 5px; }
-  .dot.ready { background: #34c759; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', monospace; background: #1c1c1e; color: #e5e5ea; min-height: 100vh; padding: 24px; }
+  h1 { font-size: 18px; font-weight: 700; color: #fff; margin-bottom: 4px; }
+  .subtitle { font-size: 12px; color: #636366; margin-bottom: 20px; font-family: monospace; }
+
+  .grid { display: grid; grid-template-columns: 320px 1fr; gap: 16px; align-items: start; }
+
+  .card { background: #2c2c2e; border-radius: 14px; padding: 20px; }
+  .card-title { font-size: 11px; font-weight: 700; color: #636366; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 14px; }
+
+  .field { margin-bottom: 12px; }
+  .field label { font-size: 11px; color: #8e8e93; display: block; margin-bottom: 4px; }
+  .field value { font-size: 13px; color: #e5e5ea; font-family: monospace; word-break: break-all; }
+
+  .status-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; background: #636366; }
+  .dot.ok { background: #30d158; }
+  .dot.err { background: #ff453a; }
+  .dot.warn { background: #ffd60a; }
+  .dot.pulse { animation: pulse 1s infinite; background: #0a84ff; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+  .status-label { font-size: 13px; color: #e5e5ea; }
+
+  button { width: 100%; margin-top: 6px; background: linear-gradient(135deg,#0a84ff,#005cde); color: #fff; border: none; border-radius: 10px; padding: 11px; font-size: 14px; font-weight: 600; cursor: pointer; }
+  button:disabled { opacity: .4; cursor: default; }
+  button.secondary { background: #3a3a3c; margin-top: 8px; font-size: 13px; }
+
+  /* API results */
+  .api-row { display: flex; align-items: flex-start; gap: 10px; padding: 10px 0; border-bottom: 1px solid #3a3a3c; font-size: 12px; }
+  .api-row:last-child { border-bottom: none; }
+  .badge { font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 5px; flex-shrink: 0; }
+  .badge-200 { background: #1a3a2a; color: #30d158; }
+  .badge-500 { background: #3a1a1a; color: #ff453a; }
+  .badge-err { background: #3a2a00; color: #ffd60a; }
+  .badge-pending { background: #1a2a3a; color: #0a84ff; }
+  .api-url { color: #8e8e93; word-break: break-all; flex: 1; }
+  .api-detail { color: #636366; font-size: 11px; margin-top: 3px; }
+
+  /* Console log */
+  #logPanel { background: #141414; border-radius: 14px; padding: 16px; font-family: monospace; font-size: 12px; height: 520px; overflow-y: auto; }
+  .log-entry { padding: 3px 0; border-bottom: 1px solid #222; line-height: 1.5; display: flex; gap: 8px; }
+  .log-time { color: #636366; flex-shrink: 0; }
+  .log-msg { word-break: break-all; }
+  .log-info  .log-msg { color: #e5e5ea; }
+  .log-warn  .log-msg { color: #ffd60a; }
+  .log-error .log-msg { color: #ff453a; }
+  .log-net   .log-msg { color: #0a84ff; }
+  .log-ok    .log-msg { color: #30d158; }
+  .log-post  .log-msg { color: #bf5af2; }
+
+  .clear-btn { float: right; font-size: 11px; color: #636366; cursor: pointer; background: none; border: none; padding: 0; width: auto; margin: 0; }
+  .clear-btn:hover { color: #8e8e93; }
 </style>
 </head>
 <body>
-<div class="card">
-  <h1>IMI Chat Widget Test</h1>
-  <p>Entry point: <code>92542134-7d51-4af1-854a-168c7f7b2963</code><br>Click the button to open the chat widget.</p>
-  <button onclick="openChat()">Open Chat Widget</button>
-  <div class="status">
-    <span class="dot" id="statusDot"></span>
-    <span id="statusText">Initialising…</span>
+
+<h1>IMI Chat Widget — Debug Test</h1>
+<div class="subtitle">Entry point: 92542134-7d51-4af1-854a-168c7f7b2963 &nbsp;|&nbsp; Host: <span id="hostDisplay"></span></div>
+
+<div class="grid">
+
+  <!-- Left panel -->
+  <div>
+    <div class="card" style="margin-bottom:16px;">
+      <div class="card-title">Widget Status</div>
+
+      <div class="status-row">
+        <div class="dot pulse" id="dotScript"></div>
+        <span class="status-label" id="lblScript">Loading imichatinit.js…</span>
+      </div>
+      <div class="status-row">
+        <div class="dot" id="dotInit"></div>
+        <span class="status-label" id="lblInit">IMIChatInit not yet defined</span>
+      </div>
+      <div class="status-row">
+        <div class="dot" id="dotIframe"></div>
+        <span class="status-label" id="lblIframe">iframechatwindow not loaded</span>
+      </div>
+      <div class="status-row">
+        <div class="dot" id="dotGetstyle"></div>
+        <span class="status-label" id="lblGetstyle">getstyle not called yet</span>
+      </div>
+      <div class="status-row">
+        <div class="dot" id="dotReady"></div>
+        <span class="status-label" id="lblReady">Widget not ready</span>
+      </div>
+
+      <button id="openBtn" onclick="openChat()">Open Chat Widget</button>
+      <button class="secondary" onclick="runApiChecks()">Re-run API Checks</button>
+      <button class="secondary" onclick="clearLog()">Clear Log</button>
+    </div>
+
+    <div class="card">
+      <div class="card-title">API Checks</div>
+      <div id="apiResults"><div style="color:#636366;font-size:12px;">Running…</div></div>
+    </div>
   </div>
+
+  <!-- Right panel: log -->
+  <div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+      <span style="font-size:11px;font-weight:700;color:#636366;text-transform:uppercase;letter-spacing:.08em;">Console / Network Log</span>
+    </div>
+    <div id="logPanel"></div>
+  </div>
+
 </div>
 
+<!-- IMI widget anchor -->
 <div id="divicw"
      style="visibility:hidden;"
      data-bind="92542134-7d51-4af1-854a-168c7f7b2963"
@@ -33,38 +122,178 @@
      data-guid="b4c93442-7827-4944-b60b-535e61409fae"></div>
 
 <script>
-var _ready = false;
+// ── Logging ──────────────────────────────────────────
+var _logPanel = null;
+function log(msg, type) {
+  if (!_logPanel) _logPanel = document.getElementById('logPanel');
+  var now = new Date();
+  var ts = now.toTimeString().split(' ')[0] + '.' + String(now.getMilliseconds()).padStart(3,'0');
+  var row = document.createElement('div');
+  row.className = 'log-entry log-' + (type || 'info');
+  row.innerHTML = '<span class="log-time">' + ts + '</span><span class="log-msg">' + escHtml(String(msg)) + '</span>';
+  _logPanel.appendChild(row);
+  _logPanel.scrollTop = _logPanel.scrollHeight;
+}
+function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function clearLog() { document.getElementById('logPanel').innerHTML = ''; }
 
-// Poll for IMIChatInit readiness and update status
+// ── Status helpers ────────────────────────────────────
+function setStatus(id, labelId, state, text) {
+  var dot = document.getElementById(id);
+  var lbl = document.getElementById(labelId);
+  dot.className = 'dot ' + state;
+  lbl.textContent = text;
+}
+
+// ── Intercept console ────────────────────────────────
+['log','warn','error','info'].forEach(function(m) {
+  var orig = console[m].bind(console);
+  console[m] = function() {
+    var args = Array.prototype.slice.call(arguments);
+    var text = args.map(function(a){ return typeof a === 'object' ? JSON.stringify(a) : String(a); }).join(' ');
+    var type = m === 'error' ? 'error' : m === 'warn' ? 'warn' : 'info';
+    log('[console.' + m + '] ' + text, type);
+    orig.apply(console, arguments);
+  };
+});
+
+// ── Intercept postMessage ─────────────────────────────
+var origPM = window.postMessage.bind(window);
+var origAddEL = window.addEventListener.bind(window);
+window.addEventListener('message', function(e) {
+  try {
+    var data = typeof e.data === 'string' ? e.data.substring(0,300) : JSON.stringify(e.data).substring(0,300);
+    log('[postMessage ← ' + e.origin + '] ' + data, 'post');
+  } catch(_) {}
+}, true); // capture phase so we see it before widget handler
+
+// ── API checks ───────────────────────────────────────
+var ENTRY_ID = '92542134-7d51-4af1-854a-168c7f7b2963';
+var GUID     = 'b4c93442-7827-4944-b60b-535e61409fae';
+
+var API_URLS = [
+  { label: 'getstyle (entry)',  url: 'https://media.imi.chat/widget/getstyle?id=' + ENTRY_ID + '&org=' },
+  { label: 'getstyle (guid)',   url: 'https://media.imi.chat/widget/getstyle?id=' + GUID + '&org=' },
+  { label: 'imichatinit.js',    url: 'https://media.imi.chat/widget/js/imichatinit.js' },
+  { label: 'imichatgeneral.js', url: 'https://media.imi.chat/widget/js/imichatgeneral.js' },
+  { label: 'widgetloader.html', url: 'https://media.imi.chat/widget/widgetloader.html?docwidth=400&id=' + ENTRY_ID + '&org=' },
+];
+
+function runApiChecks() {
+  var container = document.getElementById('apiResults');
+  container.innerHTML = '';
+  log('--- Running API checks ---', 'info');
+
+  API_URLS.forEach(function(item) {
+    var row = document.createElement('div');
+    row.className = 'api-row';
+    row.innerHTML = '<span class="badge badge-pending">…</span><div><div class="api-url">' + escHtml(item.label) + '</div><div class="api-detail" style="color:#636366;">' + escHtml(item.url.substring(0,80)) + '…</div></div>';
+    container.appendChild(row);
+    var badge = row.querySelector('.badge');
+    var detail = row.querySelector('.api-detail');
+
+    var start = Date.now();
+    fetch(item.url, { method: 'GET', mode: 'cors', cache: 'no-cache' })
+      .then(function(r) {
+        var ms = Date.now() - start;
+        var cls = r.status < 300 ? 'badge-200' : 'badge-500';
+        badge.className = 'badge ' + cls;
+        badge.textContent = r.status;
+        detail.style.color = r.status < 300 ? '#30d158' : '#ff453a';
+        detail.textContent = r.statusText + ' · ' + ms + 'ms · ' + (r.headers.get('content-type')||'').split(';')[0];
+        var level = r.status < 300 ? 'ok' : 'error';
+        log('[API ' + r.status + '] ' + item.label + ' (' + ms + 'ms)', level);
+        if (item.label === 'getstyle (entry)') {
+          if (r.status === 200) {
+            setStatus('dotGetstyle','lblGetstyle','ok','getstyle returned 200');
+            r.text().then(function(t){ log('[getstyle body] ' + t.substring(0,300), 'ok'); });
+          } else {
+            setStatus('dotGetstyle','lblGetstyle','err','getstyle ' + r.status + ' — widget will stay on Loading…');
+            r.text().then(function(t){
+              var plain = t.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
+              log('[getstyle error] ' + plain.substring(0,400), 'error');
+            });
+          }
+        }
+      })
+      .catch(function(err) {
+        var ms = Date.now() - start;
+        badge.className = 'badge badge-err';
+        badge.textContent = 'ERR';
+        detail.style.color = '#ffd60a';
+        detail.textContent = String(err);
+        log('[API ERR] ' + item.label + ' — ' + err, 'error');
+      });
+  });
+}
+
+// ── Widget readiness poll ────────────────────────────
+var _widgetReady = false;
+
 (function poll() {
   var attempts = 0;
   var timer = setInterval(function() {
     attempts++;
-    if (typeof IMIChatInit !== 'undefined' && typeof IMIChatInit.chatswitchicon === 'function') {
+
+    // Check IMIChatInit
+    if (typeof IMIChatInit !== 'undefined') {
+      setStatus('dotInit','lblInit','ok','IMIChatInit defined');
+    }
+
+    // Check iframe loaded
+    var iframe = document.getElementById('iframechatwindow');
+    if (iframe && iframe.src) {
+      setStatus('dotIframe','lblIframe','ok','iframechatwindow loaded');
+    }
+
+    // Check fully ready
+    if (typeof IMIChatInit !== 'undefined' &&
+        typeof IMIChatInit.chatswitchicon === 'function' &&
+        !_widgetReady) {
+      _widgetReady = true;
+      setStatus('dotReady','lblReady','ok','Widget ready');
+      document.getElementById('openBtn').disabled = false;
+      log('IMIChatInit ready — chatswitchicon available', 'ok');
       clearInterval(timer);
-      _ready = true;
-      document.getElementById('statusDot').classList.add('ready');
-      document.getElementById('statusText').textContent = 'Widget ready — click to open';
-    } else if (attempts > 80) {
+    }
+
+    if (attempts > 120) { // 30s
       clearInterval(timer);
-      document.getElementById('statusText').textContent = 'Widget failed to load — check console';
+      if (!_widgetReady) {
+        setStatus('dotReady','lblReady','err','Widget failed to become ready after 30s');
+        log('Timeout: IMIChatInit never became ready', 'error');
+      }
     }
   }, 250);
 })();
 
+// ── Open chat ────────────────────────────────────────
 function openChat() {
+  log('openChat() called', 'info');
   var divicw = document.getElementById('divicw');
-  if (divicw) { divicw.style.visibility = 'visible'; divicw.style.display = 'block'; }
-  if (_ready) {
+  if (divicw) {
+    divicw.style.visibility = 'visible';
+    divicw.style.display = 'block';
+    log('divicw made visible', 'info');
+  }
+  if (_widgetReady) {
+    log('Calling IMIChatInit.chatswitchicon(1)', 'info');
     IMIChatInit.chatswitchicon(1);
   } else {
-    document.getElementById('statusText').textContent = 'Still loading, try again in a moment…';
+    log('Widget not ready yet — cannot open', 'warn');
   }
 }
+
+// ── Boot ─────────────────────────────────────────────
+document.getElementById('hostDisplay').textContent = location.hostname;
+document.getElementById('openBtn').disabled = true;
+log('Page loaded on ' + location.hostname, 'info');
+log('Loading IMI snippet…', 'info');
+runApiChecks();
 </script>
 
 <!-- IMI snippet -->
-<script>{3}var i={t:function(){try{var e=document.getElementById("divicw"),t=document.createElement("script");t.src="https://media.imi.chat/widget/js/imichatinit.js?t="+new Date().toISOString(),e.insertAdjacentElement("afterend",t),t.addEventListener("load",function(){console.log(new Date().toISOString(),"Livechat script loaded successfully!")}),t.addEventListener("error",function(){console.log(new Date().toISOString(),"Error loading Livechat script");i.o(e)})}catch(e){console.error(e)}},o:function(e){e.insertAdjacentHTML("afterend",'<iframe id="tls_al_frm" frameborder="0" style="overflow:hidden;height:208px;width:394px;position:fixed;display:block;right:48px;bottom:12px;z-index:99999;display:none;"></iframe>');var t=document.getElementById("tls_al_frm"),n=t.contentWindow,d=n.document;d.open();d.write("<!doctype html><html><head><meta charset='utf-8'><title>Untitled Document</title><style>body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;color:#99a0b0;font-size:14px}.popover__content{background-color:#fbfbfe;padding:1.5rem;border-radius:5px;width:300px;box-shadow:0 2px 5px 0 rgba(0,0,0,.26);position:relative}.popover__message{font-weight:600;color:#56627c;font-size:16px}.pull-left{float:left}.clearfix{clear:both}.hdr-txt{width:218px;margin-top:3px}.para-txt a{text-decoration:none;color:#005cde}.close-btn{position:absolute;right:15px;top:15px}.close-btn a{text-decoration:none;font-weight:400;color:#56627c;font-size:16px}</style></head><body><div class='popover__content'><div class='close-btn'><a href='#' onclick='closeTLSAlert()'>X</a></div><div class='popover__message'><div class='pull-left hdr-txt'>This browser version is not supported on LiveChat.<\/div><\/div><div class='clearfix'><\/div><p class='para-txt'>Please update your browser to the latest version and re-open the website to access the widget.<\/p><\/div><script>function closeTLSAlert(){window.parent.postMessage({key:'close_tls_alert',value:'close_tls_alert',action:'close_tls_alert'},'*');}<\/script><\/body><\/html>");d.close();t.style.display='block';window.addEventListener('message',function(e){'close_tls_alert'===e.data.action&&i.s()})},s:function(){var e=document.getElementById('tls_al_frm');e&&e.remove()}};i.t();</script>
+<script>{3}var i={t:function(){try{var e=document.getElementById("divicw"),t=document.createElement("script");t.src="https://media.imi.chat/widget/js/imichatinit.js?t="+new Date().toISOString(),e.insertAdjacentElement("afterend",t),t.addEventListener("load",function(){console.log(new Date().toISOString(),"Livechat script loaded successfully!");document.getElementById('dotScript').className='dot ok';document.getElementById('lblScript').textContent='imichatinit.js loaded'}),t.addEventListener("error",function(){console.log(new Date().toISOString(),"Error loading Livechat script");document.getElementById('dotScript').className='dot err';document.getElementById('lblScript').textContent='imichatinit.js FAILED to load';i.o(e)})}catch(e){console.error(e)}},o:function(e){e.insertAdjacentHTML("afterend",'<iframe id="tls_al_frm" frameborder="0" style="overflow:hidden;height:208px;width:394px;position:fixed;display:block;right:48px;bottom:12px;z-index:99999;display:none;"></iframe>');var t=document.getElementById("tls_al_frm"),n=t.contentWindow,d=n.document;d.open();d.write("<!doctype html><html><head><meta charset='utf-8'><title>Untitled Document</title><style>body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;color:#99a0b0;font-size:14px}.popover__content{background-color:#fbfbfe;padding:1.5rem;border-radius:5px;width:300px;box-shadow:0 2px 5px 0 rgba(0,0,0,.26);position:relative}.popover__message{font-weight:600;color:#56627c;font-size:16px}.pull-left{float:left}.clearfix{clear:both}.hdr-txt{width:218px;margin-top:3px}.para-txt a{text-decoration:none;color:#005cde}.close-btn{position:absolute;right:15px;top:15px}.close-btn a{text-decoration:none;font-weight:400;color:#56627c;font-size:16px}</style></head><body><div class='popover__content'><div class='close-btn'><a href='#' onclick='closeTLSAlert()'>X</a></div><div class='popover__message'><div class='pull-left hdr-txt'>This browser version is not supported on LiveChat.<\/div><\/div><div class='clearfix'><\/div><p class='para-txt'>Please update your browser to the latest version and re-open the website to access the widget.<\/p><\/div><script>function closeTLSAlert(){window.parent.postMessage({key:'close_tls_alert',value:'close_tls_alert',action:'close_tls_alert'},'*');}<\/script><\/body><\/html>");d.close();t.style.display='block';window.addEventListener('message',function(e){'close_tls_alert'===e.data.action&&i.s()})},s:function(){var e=document.getElementById('tls_al_frm');e&&e.remove()}};i.t();</script>
 
 </body>
 </html>
