@@ -1383,16 +1383,22 @@ function handlePayNow() {
 }
 
 // ── Webex IMI Chat launcher ────────────────────────
-// On button click: poll up to 10s for IMIChatInit to be ready, then open.
+// The widget loads into #divicw but keeps it visibility:hidden.
+// We must make it visible before calling chatswitchicon(1) to open the panel.
 function launchWebexChat() {
-  showToast('Connecting to chat…');
   var attempts = 0;
   var timer = setInterval(function() {
     attempts++;
     if (typeof IMIChatInit !== 'undefined' &&
         typeof IMIChatInit.chatswitchicon === 'function') {
       clearInterval(timer);
-      IMIChatInit.chatswitchicon(1);
+      // Reveal the widget container (hidden by default by the IMI snippet)
+      var divicw = document.getElementById('divicw');
+      if (divicw) {
+        divicw.style.visibility = 'visible';
+        divicw.style.display = 'block';
+      }
+      IMIChatInit.chatswitchicon(1); // 1 = force open
     } else if (attempts > 40) { // 10s timeout
       clearInterval(timer);
       showToast('Chat unavailable — please call 1-800-435-7764');
