@@ -1383,26 +1383,31 @@ function handlePayNow() {
 }
 
 // ── Webex IMI Chat launcher ────────────────────────
+// IMIChatInit.chatswitchicon() is the widget's own public API to open the panel.
+// The bubble iframe (#imi-chatbutton) must be loaded first — we wait for it.
 function launchWebexChat() {
-  // Trigger the IMI floating bubble open if the widget exposes an API,
-  // otherwise just ensure the widget div is visible and click the bubble.
-  var bubble = document.querySelector('#divicw') ||
-               document.querySelector('[id^="imi"]') ||
-               document.querySelector('.imi-chat-button') ||
-               document.querySelector('[class*="chat-button"]') ||
-               document.querySelector('[class*="chatBtn"]');
-  if (bubble) {
-    bubble.click();
-  } else {
-    // Widget may inject its own launcher; give it a moment then try again
-    showToast('Opening live chat…');
-    setTimeout(function() {
-      var btn = document.querySelector('[class*="chat"]') ||
-                document.querySelector('[id*="chat"]') ||
-                document.querySelector('iframe[id*="imi"]');
-      if (btn) btn.click();
-    }, 800);
+  // Case 1: widget fully loaded — call its API directly
+  if (typeof IMIChatInit !== 'undefined' && typeof IMIChatInit.chatswitchicon === 'function') {
+    // Only open if currently closed (divchatmain hidden)
+    var panel = document.getElementById('divchatmain');
+    if (panel && panel.style.display === 'block') return; // already open
+    IMIChatInit.chatswitchicon();
+    return;
   }
+
+  // Case 2: widget not loaded yet (domain not whitelisted, blocked, etc.)
+  // Fall back to clicking the bubble button iframe directly
+  var bubbleFrame = document.getElementById('imi-chatbutton');
+  if (bubbleFrame) {
+    try {
+      var innerDoc = bubbleFrame.contentDocument || bubbleFrame.contentWindow.document;
+      var btn = innerDoc.getElementById('widgetlbtn') || innerDoc.querySelector('button');
+      if (btn) { btn.click(); return; }
+    } catch(e) { /* cross-origin — ignore */ }
+  }
+
+  // Case 3: widget hasn't initialised at all yet — show a helpful message
+  showToast('Chat widget loading — try again in a moment');
 }
 </script>
 
