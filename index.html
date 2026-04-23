@@ -1382,43 +1382,44 @@ function handlePayNow() {
   setTimeout(() => showToast('✓ Payment successful! Confirmation #7741'), 2000);
 }
 
-// ── Webex IMI Chat launcher (official imichatwidget SDK) ──────────────────
-// imichatwidget is the official JS SDK global exposed by the widget.
-// Docs: https://docs.imi.chat/reference/introduction-1
-//
-// Flow:
-//   1. divicw is hidden via CSS (visibility:hidden) so the bubble doesn't
-//      appear until the user intentionally opens chat.
-//   2. imichatwidget.on("imichat-widget:ready") fires when fully loaded.
-//   3. Button click calls launchWebexChat() → show() + maximizeWindow().
+// ── Webex IMI Chat launcher ────────────────────────
+// The widget snippet uses local var `i` to bootstrap — it loads imichatinit.js
+// which defines the global IMIChatInit and auto-calls IMIChatInit.init().
+// init() builds divchatmain asynchronously. We poll for it then open via
+// IMIChatInit.chatswitchicon() — the only real open API in this widget version.
+// NOTE: imichatwidget is NOT defined by this widget version despite the docs.
 
 var _imiReady = false;
 var _imiPendingOpen = false;
 
-// Wire up the ready callback as soon as the page loads.
-// imichatwidget is injected by the snippet below — it may not exist yet,
-// so we poll briefly for it then register the callback.
-(function waitForWidget() {
-  if (typeof imichatwidget !== 'undefined') {
-    imichatwidget.on('imichat-widget:ready', function(appId) {
+(function pollForWidget() {
+  var attempts = 0;
+  var timer = setInterval(function() {
+    attempts++;
+    var ready = typeof IMIChatInit !== 'undefined' &&
+                typeof IMIChatInit.chatswitchicon === 'function' &&
+                document.getElementById('divchatmain');
+    if (ready) {
+      clearInterval(timer);
       _imiReady = true;
       if (_imiPendingOpen) {
         _imiPendingOpen = false;
-        imichatwidget.show();
-        imichatwidget.maximizeWindow();
+        IMIChatInit.chatswitchicon(1); // 1 = force open
       }
-    });
-  } else {
-    setTimeout(waitForWidget, 200);
-  }
+    }
+    if (attempts > 80) { // 20s timeout
+      clearInterval(timer);
+      showToast('Chat service unavailable — please call 1-800-435-7764');
+    }
+  }, 250);
 })();
 
 function launchWebexChat() {
-  if (_imiReady && typeof imichatwidget !== 'undefined') {
-    imichatwidget.show();
-    imichatwidget.maximizeWindow();
+  if (_imiReady) {
+    var panel = document.getElementById('divchatmain');
+    if (panel && panel.style.display === 'block') return; // already open
+    IMIChatInit.chatswitchicon(1); // 1 = force open
   } else {
-    // Widget still initialising — open it the moment it's ready
     _imiPendingOpen = true;
     showToast('Connecting to chat…');
   }
