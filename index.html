@@ -1663,9 +1663,27 @@ function escapeHtml(str) {
 </script>
 <!-- jQuery (required by Webex Connect SDK) -->
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-<!-- Disable service worker entirely (not needed for live chat) -->
+<!-- Mock service worker API (SDK requires it but we don't need push notifications) -->
 <script>
-try { Object.defineProperty(navigator, 'serviceWorker', { value: undefined, configurable: true }); } catch(e) {}
+(function(){
+  var mockReg = {
+    installing: null, waiting: null, active: null, scope: '/',
+    addEventListener: function(){}, removeEventListener: function(){},
+    update: function(){ return Promise.resolve(mockReg); },
+    unregister: function(){ return Promise.resolve(true); },
+    onupdatefound: null, navigationPreload: { enable: function(){ return Promise.resolve(); } }
+  };
+  var mockSW = {
+    register: function(){ return Promise.resolve(mockReg); },
+    getRegistration: function(){ return Promise.resolve(mockReg); },
+    getRegistrations: function(){ return Promise.resolve([mockReg]); },
+    addEventListener: function(){},
+    removeEventListener: function(){},
+    ready: Promise.resolve(mockReg),
+    controller: null
+  };
+  try { Object.defineProperty(navigator, 'serviceWorker', { value: mockSW, configurable: true }); } catch(e) {}
+})();
 </script>
 <!-- Webex Connect JavaScript SDK -->
 <script src="assets/js/imi-environments.js"></script>
