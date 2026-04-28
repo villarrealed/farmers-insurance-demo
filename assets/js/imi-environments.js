@@ -5,21 +5,18 @@ var imiEnvironments = {
             "appId": 'ED23175248',
             "appSecret": '6LWlArv9',
             "pathConfig": {
-                "assetPath": "/farmers-insurance-demo/assets/",
-                "root": "/farmers-insurance-demo/"
+                "assetPath": "./assets/",
+                "root": "./"
             }
         },
         "imiclient": {
             "shouldRequestNotificationPermission": false,
             "config": {},
-            "imipush": {
-                "safariWebPushId": 'web.com.imiconnect.safari.webpush'
-            },
             "authdomain": 'https://rtm-us.imiconnect.io/rtmsAPI',
-            "rtmsdomain": 'rtm-us.imiconnect.io',
-            "safariRegisterURL": 'https://rtm-us.imiconnect.io/apnpweb/'
+            "rtmsdomain": 'rtm-us.imiconnect.io'
         },
         "sw": {
+            "enabled": false,
             "config": {
                 "messagingSenderId": '',
                 "serverUrl": 'https://rtm-us.imiconnect.io',
