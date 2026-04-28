@@ -1629,6 +1629,13 @@ function escapeHtml(str) {
 </script>
 <!-- jQuery (required by Webex Connect SDK) -->
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<!-- Disable service worker registration (not needed for live chat, causes origin mismatch) -->
+<script>
+if ('serviceWorker' in navigator) {
+  var origRegister = navigator.serviceWorker.register.bind(navigator.serviceWorker);
+  navigator.serviceWorker.register = function() { return Promise.resolve({ installing: null, waiting: null, active: null }); };
+}
+</script>
 <!-- Webex Connect JavaScript SDK -->
 <script src="assets/js/imi-environments.js"></script>
 <script src="assets/js/webex-connect-sdk.min.js"></script>
