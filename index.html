@@ -1576,6 +1576,8 @@ function sendChatMessage() {
     messaging.publishMessage(message, {
       onSuccess: function(msg) {
         console.log('Message sent:', msg);
+        // Auto-hide typing indicator after 15s if no response comes back
+        setTimeout(function() { hideTypingIndicator(); }, 15000);
       },
       onFailure: function(err) {
         console.error('Send failed:', err);
