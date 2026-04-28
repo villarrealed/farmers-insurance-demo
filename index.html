@@ -1134,7 +1134,7 @@
     <!-- ══════════ CHAT ══════════ -->
     <div class="view" id="view-chat">
       <div class="chat-header">
-        <button class="back-btn" onclick="navigateTo('home')">‹</button>
+        <button class="back-btn" onclick="exitChat()">‹</button>
         <div class="agent-info">
           <div class="agent-name">Farmers Support</div>
           <div class="agent-status">
@@ -1145,7 +1145,8 @@
         <div style="width:36px;height:36px;background:rgba(255,255,255,.2);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;">💬</div>
       </div>
 
-      <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 24px;gap:20px;text-align:center;">
+      <!-- Pre-chat: shown before starting a conversation -->
+      <div id="chat-prechat" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 24px;gap:20px;text-align:center;">
         <div style="width:80px;height:80px;background:linear-gradient(135deg,#049fd9,#005cde);border-radius:24px;display:flex;align-items:center;justify-content:center;font-size:38px;box-shadow:0 8px 24px rgba(4,159,217,.3);">💬</div>
         <div>
           <div style="font-size:20px;font-weight:700;color:#1c1c1e;margin-bottom:6px;">Live Chat Support</div>
@@ -1175,6 +1176,11 @@
             </div>
           </div>
         </div>
+      </div>
+
+      <!-- Active chat: IMI widget embedded in iframe -->
+      <div id="chat-widget-area" style="flex:1;position:relative;overflow:hidden;display:none;">
+        <iframe id="chat-iframe" src="about:blank" style="width:100%;height:100%;border:none;" allow="microphone"></iframe>
       </div>
     </div>
 
@@ -1390,75 +1396,29 @@ function handlePayNow() {
   setTimeout(() => showToast('✓ Payment successful! Confirmation #7741'), 2000);
 }
 
-// ── Webex Connect (IMI) Chat Widget ───────────────
-function launchWebexChat() {
-  // Try to open the real Webex Connect chat widget
-  try {
-    if (typeof IMIChatInit !== 'undefined' && IMIChatInit.chatswitchicon) {
-      IMIChatInit.chatswitchicon(1);
-      return;
-    }
-    if (typeof imichatwidget !== 'undefined' && imichatwidget.maximizeWindow) {
-      imichatwidget.show();
-      imichatwidget.maximizeWindow();
-      return;
-    }
-    var bubble = document.querySelector('#divchatmain, .imi-chat-bubble, [class*="imi"]');
-    if (bubble) { bubble.click(); return; }
-  } catch(e) {
-    console.warn('Webex chat widget not ready:', e);
-  }
-  showToast('Connecting to Webex Chat...');
-  setTimeout(function() {
-    try {
-      if (typeof IMIChatInit !== 'undefined' && IMIChatInit.chatswitchicon) {
-        IMIChatInit.chatswitchicon(1);
-      } else {
-        showToast('Chat widget is loading — please try again in a moment');
-      }
-    } catch(e) {
-      showToast('Unable to connect to chat — please try again');
-    }
-  }, 2000);
-}
-</script>
+// ── Webex Connect (IMI) Chat — Embedded in iframe ─
+var chatActive = false;
 
-<!-- ══════════════════════════════════════════════
-     Webex Connect (IMI) Live Chat Widget
-     Entry Point: 1037DA7E / GUID: b4c93442
-════════════════════════════════════════════════ -->
-<style>
-  /* Hide the default IMI chat bubble — we use our own "Start Live Chat" button */
-  #divicw > iframe.chatbutton,
-  #divicw #imi-chatbutton { opacity: 0 !important; pointer-events: none !important; width: 0 !important; height: 0 !important; }
-</style>
-<div id="divicw" data-bind="1037DA7E-AED7-49C9-BF31-96C35755BA74" data-org="" data-guid="b4c93442-7827-4944-b60b-535e61409fae"></div>
-<script>
-(function(){
-  try {
-    var e = document.getElementById("divicw");
-    var t = document.createElement("script");
-    t.src = "https://media.imi.chat/widget/js/imichatinit.js?t=" + new Date().toISOString();
-    e.insertAdjacentElement("afterend", t);
-    t.addEventListener("load", function(){
-      console.log(new Date().toISOString(), "Webex Connect livechat script loaded");
-      // Explicitly initialize the widget after script loads
-      if (typeof IMIChatInit !== 'undefined' && IMIChatInit.init) {
-        try {
-          IMIChatInit.init();
-          console.log("IMIChatInit.init() called successfully");
-        } catch(initErr) {
-          console.warn("IMIChatInit.init() error:", initErr);
-        }
-      }
-    });
-    t.addEventListener("error", function(){
-      console.error(new Date().toISOString(), "Error loading Webex Connect livechat script");
-    });
-  } catch(err) {
-    console.error("IMI chat widget init error:", err);
+function launchWebexChat() {
+  // Show the widget area, hide pre-chat
+  document.getElementById('chat-prechat').style.display = 'none';
+  var area = document.getElementById('chat-widget-area');
+  area.style.display = 'flex';
+
+  // Load the chat frame if not already loaded
+  var iframe = document.getElementById('chat-iframe');
+  if (!chatActive) {
+    iframe.src = 'chat-frame.html';
+    chatActive = true;
   }
-})();
+}
+
+function exitChat() {
+  // Return to pre-chat screen and navigate home
+  document.getElementById('chat-prechat').style.display = 'flex';
+  document.getElementById('chat-widget-area').style.display = 'none';
+  navigateTo('home');
+}
 </script>
 
 </body>
