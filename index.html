@@ -1427,7 +1427,12 @@ function launchWebexChat() {
      Webex Connect (IMI) Live Chat Widget
      Entry Point: 1037DA7E / GUID: b4c93442
 ════════════════════════════════════════════════ -->
-<div id="divicw" style="visibility:hidden;" data-bind="1037DA7E-AED7-49C9-BF31-96C35755BA74" data-org="" data-guid="b4c93442-7827-4944-b60b-535e61409fae"></div>
+<style>
+  /* Hide the default IMI chat bubble — we use our own "Start Live Chat" button */
+  #divicw > iframe.chatbutton,
+  #divicw #imi-chatbutton { opacity: 0 !important; pointer-events: none !important; width: 0 !important; height: 0 !important; }
+</style>
+<div id="divicw" data-bind="1037DA7E-AED7-49C9-BF31-96C35755BA74" data-org="" data-guid="b4c93442-7827-4944-b60b-535e61409fae"></div>
 <script>
 (function(){
   try {
@@ -1436,7 +1441,16 @@ function launchWebexChat() {
     t.src = "https://media.imi.chat/widget/js/imichatinit.js?t=" + new Date().toISOString();
     e.insertAdjacentElement("afterend", t);
     t.addEventListener("load", function(){
-      console.log(new Date().toISOString(), "Webex Connect livechat script loaded successfully!");
+      console.log(new Date().toISOString(), "Webex Connect livechat script loaded");
+      // Explicitly initialize the widget after script loads
+      if (typeof IMIChatInit !== 'undefined' && IMIChatInit.init) {
+        try {
+          IMIChatInit.init();
+          console.log("IMIChatInit.init() called successfully");
+        } catch(initErr) {
+          console.warn("IMIChatInit.init() error:", initErr);
+        }
+      }
     });
     t.addEventListener("error", function(){
       console.error(new Date().toISOString(), "Error loading Webex Connect livechat script");
