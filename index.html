@@ -1671,7 +1671,14 @@ function escapeHtml(str) {
     addEventListener: function(){}, removeEventListener: function(){},
     update: function(){ return Promise.resolve(mockReg); },
     unregister: function(){ return Promise.resolve(true); },
+    showNotification: function(){ return Promise.resolve(); },
     onupdatefound: null, navigationPreload: { enable: function(){ return Promise.resolve(); } }
+  };
+  var mockCtrl = {
+    postMessage: function(){},
+    addEventListener: function(){},
+    removeEventListener: function(){},
+    scriptURL: '', state: 'activated', onstatechange: null
   };
   var mockSW = {
     register: function(){ return Promise.resolve(mockReg); },
@@ -1679,8 +1686,10 @@ function escapeHtml(str) {
     getRegistrations: function(){ return Promise.resolve([mockReg]); },
     addEventListener: function(){},
     removeEventListener: function(){},
+    startMessages: function(){},
     ready: Promise.resolve(mockReg),
-    controller: null
+    controller: mockCtrl,
+    oncontrollerchange: null, onmessage: null
   };
   try { Object.defineProperty(navigator, 'serviceWorker', { value: mockSW, configurable: true }); } catch(e) {}
 })();
