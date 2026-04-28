@@ -1663,35 +1663,33 @@ function escapeHtml(str) {
 </script>
 <!-- jQuery (required by Webex Connect SDK) -->
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-<!-- Mock service worker API (SDK requires it but we don't need push notifications) -->
+<!-- Patch service worker API — SDK requires SW but we only need the postMessage path to not crash -->
 <script>
 (function(){
+  if (!('serviceWorker' in navigator)) return;
+  // Mock active SW object with postMessage
+  var mockActiveSW = {
+    postMessage: function(d){ console.log('SW mock: postMessage intercepted', d); },
+    addEventListener: function(){}, removeEventListener: function(){},
+    scriptURL: '/sw.min.js', state: 'activated', onstatechange: null
+  };
   var mockReg = {
-    installing: null, waiting: null, active: null, scope: '/',
+    installing: null, waiting: null, active: mockActiveSW, scope: '/',
     addEventListener: function(){}, removeEventListener: function(){},
     update: function(){ return Promise.resolve(mockReg); },
     unregister: function(){ return Promise.resolve(true); },
     showNotification: function(){ return Promise.resolve(); },
-    onupdatefound: null, navigationPreload: { enable: function(){ return Promise.resolve(); } }
+    onupdatefound: null,
+    navigationPreload: { enable: function(){ return Promise.resolve(); } }
   };
-  var mockCtrl = {
-    postMessage: function(){},
-    addEventListener: function(){},
-    removeEventListener: function(){},
-    scriptURL: '', state: 'activated', onstatechange: null
-  };
-  var mockSW = {
-    register: function(){ return Promise.resolve(mockReg); },
-    getRegistration: function(){ return Promise.resolve(mockReg); },
-    getRegistrations: function(){ return Promise.resolve([mockReg]); },
-    addEventListener: function(){},
-    removeEventListener: function(){},
-    startMessages: function(){},
-    ready: Promise.resolve(mockReg),
-    controller: mockCtrl,
-    oncontrollerchange: null, onmessage: null
-  };
-  try { Object.defineProperty(navigator, 'serviceWorker', { value: mockSW, configurable: true }); } catch(e) {}
+  // Monkey-patch methods on the REAL navigator.serviceWorker (the object itself is read-only)
+  var sw = navigator.serviceWorker;
+  sw.getRegistration = function(){ return Promise.resolve(mockReg); };
+  sw.getRegistrations = function(){ return Promise.resolve([mockReg]); };
+  sw.register = function(){ return Promise.resolve(mockReg); };
+  try { Object.defineProperty(sw, 'ready', { get: function(){ return Promise.resolve(mockReg); }, configurable: true }); } catch(e){}
+  try { Object.defineProperty(sw, 'controller', { get: function(){ return mockActiveSW; }, configurable: true }); } catch(e){}
+  console.log('SW mock: patched navigator.serviceWorker methods');
 })();
 </script>
 <!-- Webex Connect JavaScript SDK -->
