@@ -1390,141 +1390,62 @@ function handlePayNow() {
   setTimeout(() => showToast('✓ Payment successful! Confirmation #7741'), 2000);
 }
 
-// ── Mock Webex Chat Widget ────────────────────────
-var _mockChatOpen = false;
-var _mockChatStarted = false;
-
+// ── Webex Connect (IMI) Chat Widget ───────────────
 function launchWebexChat() {
-  var panel = document.getElementById('mockChatPanel');
-  if (!panel) return;
-  _mockChatOpen = true;
-  panel.style.display = 'flex';
-  panel.style.animation = 'chatSlideUp 0.3s ease';
-  if (!_mockChatStarted) {
-    _mockChatStarted = true;
-    setTimeout(function() { mockAgentTyping(); }, 1200);
-    setTimeout(function() {
-      mockAddMessage('agent', "Hi! I'm Sarah from Farmers Insurance. How can I help you today?");
-    }, 2800);
+  // Try to open the real Webex Connect chat widget
+  try {
+    if (typeof IMIChatInit !== 'undefined' && IMIChatInit.chatswitchicon) {
+      IMIChatInit.chatswitchicon(1);
+      return;
+    }
+    if (typeof imichatwidget !== 'undefined' && imichatwidget.maximizeWindow) {
+      imichatwidget.show();
+      imichatwidget.maximizeWindow();
+      return;
+    }
+    var bubble = document.querySelector('#divchatmain, .imi-chat-bubble, [class*="imi"]');
+    if (bubble) { bubble.click(); return; }
+  } catch(e) {
+    console.warn('Webex chat widget not ready:', e);
   }
-}
-
-function closeMockChat() {
-  _mockChatOpen = false;
-  var panel = document.getElementById('mockChatPanel');
-  if (panel) panel.style.display = 'none';
-}
-
-function mockAgentTyping() {
-  var log = document.getElementById('mockChatLog');
-  if (!log) return;
-  var typing = document.createElement('div');
-  typing.id = 'mockTypingIndicator';
-  typing.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:12px;';
-  typing.innerHTML = '<div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#049fd9,#005cde);display:flex;align-items:center;justify-content:center;font-size:13px;color:#fff;font-weight:700;flex-shrink:0;">S</div>'
-    + '<div style="background:#f2f2f7;border-radius:16px 16px 16px 4px;padding:10px 14px;display:flex;gap:4px;align-items:center;">'
-    + '<span style="width:7px;height:7px;background:#8e8e93;border-radius:50%;animation:typingDot 1.2s infinite 0s;display:inline-block;"></span>'
-    + '<span style="width:7px;height:7px;background:#8e8e93;border-radius:50%;animation:typingDot 1.2s infinite 0.2s;display:inline-block;"></span>'
-    + '<span style="width:7px;height:7px;background:#8e8e93;border-radius:50%;animation:typingDot 1.2s infinite 0.4s;display:inline-block;"></span>'
-    + '</div>';
-  log.appendChild(typing);
-  log.scrollTop = log.scrollHeight;
-}
-
-function mockAddMessage(role, text) {
-  var log = document.getElementById('mockChatLog');
-  if (!log) return;
-  var tip = document.getElementById('mockTypingIndicator');
-  if (tip) tip.remove();
-  var div = document.createElement('div');
-  div.style.cssText = 'display:flex;gap:8px;margin-bottom:12px;' + (role === 'user' ? 'flex-direction:row-reverse;' : '');
-  var avatar = role === 'agent'
-    ? '<div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#049fd9,#005cde);display:flex;align-items:center;justify-content:center;font-size:13px;color:#fff;font-weight:700;flex-shrink:0;">S</div>'
-    : '<div style="width:32px;height:32px;border-radius:50%;background:#cc2228;display:flex;align-items:center;justify-content:center;font-size:13px;color:#fff;font-weight:700;flex-shrink:0;">E</div>';
-  var bubble = role === 'agent'
-    ? '<div style="background:#f2f2f7;color:#1c1c1e;border-radius:16px 16px 16px 4px;padding:10px 14px;max-width:240px;font-size:14px;line-height:1.4;">' + text + '</div>'
-    : '<div style="background:linear-gradient(135deg,#049fd9,#005cde);color:#fff;border-radius:16px 16px 4px 16px;padding:10px 14px;max-width:240px;font-size:14px;line-height:1.4;">' + text + '</div>';
-  div.innerHTML = avatar + bubble;
-  log.appendChild(div);
-  log.scrollTop = log.scrollHeight;
-}
-
-var _mockResponses = [
-  "I can help you with that! Let me pull up your policy details.",
-  "Your policy TX-8842-2190-A is active and in good standing.",
-  "For your 2019 Toyota Camry, your comprehensive coverage includes $500 deductible.",
-  "Your next payment of $123.67 is due on May 15th.",
-  "Is there anything else I can help you with today?",
-  "I've noted that in your account. You'll receive a confirmation email shortly.",
-  "I'm happy to connect you with a claims specialist if needed.",
-];
-var _mockRespIdx = 0;
-
-function mockSendMessage() {
-  var inp = document.getElementById('mockChatInput');
-  if (!inp || !inp.value.trim()) return;
-  var text = inp.value.trim();
-  inp.value = '';
-  mockAddMessage('user', text);
-  setTimeout(function() { mockAgentTyping(); }, 500);
-  var resp = _mockResponses[_mockRespIdx % _mockResponses.length];
-  _mockRespIdx++;
-  setTimeout(function() { mockAddMessage('agent', resp); }, 2000 + Math.random() * 800);
-}
-
-function mockChatKeydown(e) {
-  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); mockSendMessage(); }
+  showToast('Connecting to Webex Chat...');
+  setTimeout(function() {
+    try {
+      if (typeof IMIChatInit !== 'undefined' && IMIChatInit.chatswitchicon) {
+        IMIChatInit.chatswitchicon(1);
+      } else {
+        showToast('Chat widget is loading — please try again in a moment');
+      }
+    } catch(e) {
+      showToast('Unable to connect to chat — please try again');
+    }
+  }, 2000);
 }
 </script>
 
 <!-- ══════════════════════════════════════════════
-     Mock Webex Contact Center Chat Panel
-     Self-contained — no external dependencies.
-     Swap back to real IMI snippet when backend is fixed.
+     Webex Connect (IMI) Live Chat Widget
+     Entry Point: 1037DA7E / GUID: b4c93442
 ════════════════════════════════════════════════ -->
-<div id="mockChatPanel" style="display:none;position:fixed;bottom:24px;right:24px;width:340px;height:500px;background:#fff;border-radius:20px;box-shadow:0 8px 40px rgba(0,0,0,.22);z-index:99999;flex-direction:column;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
-  <!-- Header -->
-  <div style="background:linear-gradient(135deg,#049fd9,#005cde);padding:16px 16px 14px;display:flex;align-items:center;gap:10px;">
-    <div style="width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:18px;">💬</div>
-    <div style="flex:1;">
-      <div style="color:#fff;font-weight:700;font-size:15px;">Farmers Support</div>
-      <div style="color:rgba(255,255,255,.85);font-size:12px;display:flex;align-items:center;gap:5px;">
-        <span style="width:7px;height:7px;background:#4cd964;border-radius:50%;display:inline-block;"></span>
-        Live · Cisco Webex Contact Center
-      </div>
-    </div>
-    <button onclick="closeMockChat()" style="background:rgba(255,255,255,.2);border:none;border-radius:50%;width:30px;height:30px;color:#fff;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;">×</button>
-  </div>
-  <!-- Chat log -->
-  <div id="mockChatLog" style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:0;background:#fafafa;">
-    <!-- System message -->
-    <div style="text-align:center;margin-bottom:16px;">
-      <span style="background:#e5e5ea;color:#636366;font-size:11px;padding:4px 10px;border-radius:10px;">Connected to Webex Contact Center</span>
-    </div>
-  </div>
-  <!-- Input bar -->
-  <div style="padding:10px 12px;background:#fff;border-top:1px solid #e5e5ea;display:flex;align-items:center;gap:8px;">
-    <input id="mockChatInput" onkeydown="mockChatKeydown(event)" type="text" placeholder="Type a message…" style="flex:1;border:1.5px solid #e5e5ea;border-radius:20px;padding:9px 14px;font-size:14px;outline:none;background:#fafafa;" />
-    <button onclick="mockSendMessage()" style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#049fd9,#005cde);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M22 2L11 13" stroke="white" stroke-width="2.5" stroke-linecap="round"/><path d="M22 2L15 22L11 13L2 9L22 2Z" stroke="white" stroke-width="2.5" stroke-linejoin="round"/></svg>
-    </button>
-  </div>
-  <!-- Powered-by footer -->
-  <div style="background:#fff;text-align:center;padding:6px;border-top:1px solid #f0f0f0;">
-    <span style="font-size:10px;color:#aeaeb2;">Powered by </span>
-    <span style="font-size:10px;color:#049fd9;font-weight:600;">Cisco Webex Contact Center</span>
-  </div>
-</div>
-
-<!-- Real IMI snippet — disabled while media.imi.chat getstyle returns 500.
-     Re-enable by removing the comment tags when backend is fixed.
-<div id="divicw"
-     style="visibility:hidden;"
-     data-bind="92542134-7d51-4af1-854a-168c7f7b2963"
-     data-org=""
-     data-guid="b4c93442-7827-4944-b60b-535e61409fae"></div>
-<script>... IMI snippet here ...</script>
--->
+<div id="divicw" style="visibility:hidden;" data-bind="1037DA7E-AED7-49C9-BF31-96C35755BA74" data-org="" data-guid="b4c93442-7827-4944-b60b-535e61409fae"></div>
+<script>
+(function(){
+  try {
+    var e = document.getElementById("divicw");
+    var t = document.createElement("script");
+    t.src = "https://media.imi.chat/widget/js/imichatinit.js?t=" + new Date().toISOString();
+    e.insertAdjacentElement("afterend", t);
+    t.addEventListener("load", function(){
+      console.log(new Date().toISOString(), "Webex Connect livechat script loaded successfully!");
+    });
+    t.addEventListener("error", function(){
+      console.error(new Date().toISOString(), "Error loading Webex Connect livechat script");
+    });
+  } catch(err) {
+    console.error("IMI chat widget init error:", err);
+  }
+})();
+</script>
 
 </body>
 </html>
