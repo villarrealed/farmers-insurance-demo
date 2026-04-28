@@ -1418,7 +1418,7 @@ function launchWebexChat() {
   var active = document.getElementById('chat-active');
   active.style.display = 'flex';
 
-  if (sdkReady && chatThread) {
+  if (sdkReady) {
     // Already connected, just show
     return;
   }
@@ -1470,10 +1470,17 @@ function onRegistered() {
       console.log('Connection status:', status);
       if (status === 'CONNECTED' || status === 1) {
         updateChatStatus('connected');
+        sdkReady = true;
+        sdkConnecting = false;
+        clearSystemMessages();
+        addAgentMessage("Hi Ed! I'm your Farmers Insurance virtual assistant. How can I help you today?");
+        // Create thread in background
+        ensureThread();
       }
     },
     onMessageReceived: function(message) {
       console.log('Message received:', message);
+      hideTypingIndicator();
       var text = '';
       try {
         text = message.getMessage ? message.getMessage() : (message.message || message.text || JSON.stringify(message));
@@ -1493,29 +1500,53 @@ function onRegistered() {
     } catch(e) {
       console.error('Messaging connect error:', e);
     }
+  } else {
+    // Already connected (e.g. returning to chat)
+    sdkReady = true;
+    sdkConnecting = false;
+    clearSystemMessages();
+    updateChatStatus('connected');
   }
+}
 
-  // Create a thread for this chat session
-  var thread = new IMI.ICThread();
-  thread.setTitle('Farmers Insurance Support');
-  thread.setCategory('support');
-
-  messaging.createThread(thread, {
-    onCreateThreadComplete: function(icThread, error) {
-      if (error) {
-        console.error('Create thread error:', error);
-        // Try to use the thread object anyway
-        chatThread = thread;
-      } else {
+function ensureThread(callback) {
+  if (chatThread) { if (callback) callback(); return; }
+  try {
+    var thread = new IMI.ICThread();
+    thread.setTitle('Farmers Insurance Support');
+    thread.setCategory('support');
+    var messaging = IMI.ICMessaging.getInstance();
+    messaging.createThread(thread, {
+      onCreateThreadComplete: function(icThread, error) {
+        console.log('Thread created:', icThread, error);
+        chatThread = error ? thread : icThread;
+        if (callback) callback();
+      },
+      onSuccess: function(icThread) {
+        console.log('Thread created (onSuccess):', icThread);
         chatThread = icThread;
+        if (callback) callback();
+      },
+      onFailure: function(err) {
+        console.warn('Thread create failed, using local thread:', err);
+        chatThread = thread;
+        if (callback) callback();
       }
-      sdkReady = true;
-      sdkConnecting = false;
-      updateChatStatus('connected');
-      clearSystemMessages();
-      addAgentMessage("Hi Ed! I'm your Farmers Insurance virtual assistant. How can I help you today?");
-    }
-  });
+    });
+    // Fallback: if no callback fires in 3s, use thread anyway
+    setTimeout(function() {
+      if (!chatThread) {
+        console.warn('Thread callback timeout, using local thread');
+        chatThread = thread;
+        if (callback) callback();
+      }
+    }, 3000);
+  } catch(e) {
+    console.error('ensureThread error:', e);
+    chatThread = new IMI.ICThread();
+    chatThread.setTitle('Farmers Insurance Support');
+    if (callback) callback();
+  }
 }
 
 function sendChatMessage() {
@@ -1524,32 +1555,35 @@ function sendChatMessage() {
   if (!text) return;
   input.value = '';
 
-  // Add user message to UI
+  // Add user message to UI immediately
   addUserMessage(text);
 
-  if (!sdkReady || !chatThread) {
+  if (!sdkReady) {
     addSystemMessage('Connecting... please wait.');
     return;
   }
 
-  // Send via SDK
-  var message = new IMI.ICMessage();
-  message.setMessage(text);
-  message.setThread(chatThread);
-
-  var messaging = IMI.ICMessaging.getInstance();
-  messaging.publishMessage(message, {
-    onSuccess: function(msg) {
-      console.log('Message sent:', msg);
-    },
-    onFailure: function(err) {
-      console.error('Send failed:', err);
-      addSystemMessage('Message failed to send. Please try again.');
-    }
-  });
-
   // Show typing indicator
   showTypingIndicator();
+
+  // Ensure thread exists, then publish
+  ensureThread(function() {
+    var message = new IMI.ICMessage();
+    message.setMessage(text);
+    message.setThread(chatThread);
+
+    var messaging = IMI.ICMessaging.getInstance();
+    messaging.publishMessage(message, {
+      onSuccess: function(msg) {
+        console.log('Message sent:', msg);
+      },
+      onFailure: function(err) {
+        console.error('Send failed:', err);
+        hideTypingIndicator();
+        addSystemMessage('Message failed to send. Please try again.');
+      }
+    });
+  });
 }
 
 function exitChat() {
