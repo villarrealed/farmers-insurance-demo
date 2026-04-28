@@ -1629,18 +1629,9 @@ function escapeHtml(str) {
 </script>
 <!-- jQuery (required by Webex Connect SDK) -->
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-<!-- Disable service worker registration (not needed for live chat, causes origin mismatch) -->
+<!-- Disable service worker entirely (not needed for live chat) -->
 <script>
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register = function() {
-    var mock = { installing: null, waiting: null, active: null, scope: '/',
-      addEventListener: function(){}, removeEventListener: function(){},
-      update: function(){ return Promise.resolve(this); },
-      unregister: function(){ return Promise.resolve(true); },
-      onupdatefound: null };
-    return Promise.resolve(mock);
-  };
-}
+try { Object.defineProperty(navigator, 'serviceWorker', { value: undefined, configurable: true }); } catch(e) {}
 </script>
 <!-- Webex Connect JavaScript SDK -->
 <script src="assets/js/imi-environments.js"></script>
