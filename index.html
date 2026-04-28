@@ -1514,14 +1514,10 @@ function ensureThread(callback) {
   try {
     var thread = new IMI.ICThread();
     thread.setTitle('Farmers Insurance Support');
-    thread.setCategory('support');
+    thread.setStatus(IMI.ICThreadStatus.Active);
+    thread.setType(IMI.ICThreadType.Conversation);
     var messaging = IMI.ICMessaging.getInstance();
     messaging.createThread(thread, {
-      onCreateThreadComplete: function(icThread, error) {
-        console.log('Thread created:', icThread, error);
-        chatThread = error ? thread : icThread;
-        if (callback) callback();
-      },
       onSuccess: function(icThread) {
         console.log('Thread created (onSuccess):', icThread);
         chatThread = icThread;
@@ -1530,23 +1526,26 @@ function ensureThread(callback) {
       onFailure: function(err) {
         console.error('Thread create failed:', err);
         try { console.error('Thread error detail:', JSON.stringify(err)); } catch(x){}
+        // Fallback: use local thread with fake ID so publishMessage doesn't throw
         chatThread = thread;
-        chatThread.setId('local-' + Date.now()); // set fallback ID so publishMessage doesn't throw
+        chatThread.setId('local-' + Date.now());
         if (callback) callback();
       }
     });
-    // Fallback: if no callback fires in 3s, use thread anyway
+    // Fallback: if no callback fires in 5s, use thread anyway
     setTimeout(function() {
       if (!chatThread) {
         console.warn('Thread callback timeout, using local thread');
         chatThread = thread;
+        chatThread.setId('local-' + Date.now());
         if (callback) callback();
       }
-    }, 3000);
+    }, 5000);
   } catch(e) {
     console.error('ensureThread error:', e);
     chatThread = new IMI.ICThread();
     chatThread.setTitle('Farmers Insurance Support');
+    chatThread.setId('local-' + Date.now());
     if (callback) callback();
   }
 }
