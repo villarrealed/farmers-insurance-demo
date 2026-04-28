@@ -1528,8 +1528,10 @@ function ensureThread(callback) {
         if (callback) callback();
       },
       onFailure: function(err) {
-        console.warn('Thread create failed, using local thread:', err);
+        console.error('Thread create failed:', err);
+        try { console.error('Thread error detail:', JSON.stringify(err)); } catch(x){}
         chatThread = thread;
+        chatThread.setId('local-' + Date.now()); // set fallback ID so publishMessage doesn't throw
         if (callback) callback();
       }
     });
@@ -1663,6 +1665,16 @@ function escapeHtml(str) {
 </script>
 <!-- jQuery (required by Webex Connect SDK) -->
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script>
+// Global AJAX error interceptor — captures ALL failed HTTP requests from the SDK
+$(document).ajaxError(function(event, jqXHR, settings, thrownError) {
+  console.error('AJAX ERROR:', settings.type, settings.url, 'status:', jqXHR.status, jqXHR.statusText);
+  try { console.error('AJAX response:', jqXHR.responseText); } catch(x){}
+});
+$(document).ajaxComplete(function(event, jqXHR, settings) {
+  console.log('AJAX:', settings.type, settings.url, 'status:', jqXHR.status);
+});
+</script>
 <!-- Patch service worker API — SDK requires SW but we only need the postMessage path to not crash -->
 <script>
 (function(){
