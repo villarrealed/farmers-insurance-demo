@@ -1632,8 +1632,14 @@ function escapeHtml(str) {
 <!-- Disable service worker registration (not needed for live chat, causes origin mismatch) -->
 <script>
 if ('serviceWorker' in navigator) {
-  var origRegister = navigator.serviceWorker.register.bind(navigator.serviceWorker);
-  navigator.serviceWorker.register = function() { return Promise.resolve({ installing: null, waiting: null, active: null }); };
+  navigator.serviceWorker.register = function() {
+    var mock = { installing: null, waiting: null, active: null, scope: '/',
+      addEventListener: function(){}, removeEventListener: function(){},
+      update: function(){ return Promise.resolve(this); },
+      unregister: function(){ return Promise.resolve(true); },
+      onupdatefound: null };
+    return Promise.resolve(mock);
+  };
 }
 </script>
 <!-- Webex Connect JavaScript SDK -->
