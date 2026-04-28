@@ -1137,9 +1137,9 @@
         <button class="back-btn" onclick="exitChat()">‹</button>
         <div class="agent-info">
           <div class="agent-name">Farmers Support</div>
-          <div class="agent-status">
-            <span class="online-dot"></span>
-            <span>Live · Cisco Webex Contact Center</span>
+          <div class="agent-status" id="chatStatus">
+            <span class="online-dot" id="chatStatusDot"></span>
+            <span id="chatStatusText">Live · Cisco Webex Contact Center</span>
           </div>
         </div>
         <div style="width:36px;height:36px;background:rgba(255,255,255,.2);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;">💬</div>
@@ -1152,7 +1152,7 @@
           <div style="font-size:20px;font-weight:700;color:#1c1c1e;margin-bottom:6px;">Live Chat Support</div>
           <div style="font-size:14px;color:#8e8e93;line-height:1.5;">Connect with a Farmers specialist now. Average wait time: &lt;2 min.</div>
         </div>
-        <button onclick="launchWebexChat()" style="background:linear-gradient(135deg,#049fd9,#005cde);color:#fff;border:none;border-radius:16px;width:100%;height:54px;font-size:17px;font-weight:700;cursor:pointer;box-shadow:0 4px 16px rgba(4,159,217,.35);display:flex;align-items:center;justify-content:center;gap:8px;">
+        <button onclick="launchWebexChat()" id="startChatBtn" style="background:linear-gradient(135deg,#049fd9,#005cde);color:#fff;border:none;border-radius:16px;width:100%;height:54px;font-size:17px;font-weight:700;cursor:pointer;box-shadow:0 4px 16px rgba(4,159,217,.35);display:flex;align-items:center;justify-content:center;gap:8px;">
           Start Live Chat
         </button>
         <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:#8e8e93;">
@@ -1178,9 +1178,19 @@
         </div>
       </div>
 
-      <!-- Active chat: IMI widget embedded in iframe -->
-      <div id="chat-widget-area" style="flex:1;position:relative;overflow:hidden;display:none;">
-        <iframe id="chat-iframe" src="about:blank" style="width:100%;height:100%;border:none;" allow="microphone"></iframe>
+      <!-- Active chat: native message UI powered by Webex Connect SDK -->
+      <div id="chat-active" style="display:none;flex:1;flex-direction:column;position:relative;">
+        <div class="cisco-badge">
+          <span class="cisco-dot">C</span>
+          Powered by Cisco Webex Contact Center
+        </div>
+        <div class="chat-messages" id="chatMessages">
+          <!-- Messages inserted here by JS -->
+        </div>
+        <div class="chat-input-bar">
+          <input class="chat-input" id="chatInput" type="text" placeholder="Type a message..." autocomplete="off" onkeydown="if(event.key==='Enter')sendChatMessage()">
+          <button class="chat-send-btn" onclick="sendChatMessage()">↑</button>
+        </div>
       </div>
     </div>
 
@@ -1396,30 +1406,230 @@ function handlePayNow() {
   setTimeout(() => showToast('✓ Payment successful! Confirmation #7741'), 2000);
 }
 
-// ── Webex Connect (IMI) Chat — Embedded in iframe ─
+// ── Webex Connect SDK — Live Chat ─────────────────
 var chatActive = false;
+var chatThread = null;
+var sdkReady = false;
+var sdkConnecting = false;
 
 function launchWebexChat() {
-  // Show the widget area, hide pre-chat
+  // Show the active chat UI
   document.getElementById('chat-prechat').style.display = 'none';
-  var area = document.getElementById('chat-widget-area');
-  area.style.display = 'flex';
+  var active = document.getElementById('chat-active');
+  active.style.display = 'flex';
 
-  // Load the chat frame if not already loaded
-  var iframe = document.getElementById('chat-iframe');
-  if (!chatActive) {
-    iframe.src = 'chat-frame.html';
-    chatActive = true;
+  if (sdkReady && chatThread) {
+    // Already connected, just show
+    return;
+  }
+  if (sdkConnecting) return;
+  sdkConnecting = true;
+
+  updateChatStatus('connecting');
+  addSystemMessage('Connecting to agent...');
+
+  // Initialize SDK
+  try {
+    IMI.IMIconnect.startup();
+  } catch(e) {
+    console.warn('SDK startup:', e);
+  }
+
+  if (IMI.IMIconnect.isRegistered()) {
+    onRegistered();
+  } else {
+    // Generate a unique device ID for this browser session
+    var deviceId = localStorage.getItem('farmers_device_id');
+    if (!deviceId) {
+      deviceId = 'farmers-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+      localStorage.setItem('farmers_device_id', deviceId);
+    }
+    var userId = 'ed.villarreal';
+    var deviceProfile = new IMI.ICDeviceProfile(deviceId, userId);
+    IMI.IMIconnect.register(deviceProfile, {
+      onSuccess: function(data) {
+        console.log('SDK registered, userId:', data.userId);
+        onRegistered();
+      },
+      onFailure: function(err) {
+        console.error('SDK register failed:', err);
+        sdkConnecting = false;
+        addSystemMessage('Unable to connect. Please try again.');
+        updateChatStatus('error');
+      }
+    });
   }
 }
 
+function onRegistered() {
+  var messaging = IMI.ICMessaging.getInstance();
+
+  // Set up message receiver
+  messaging.setICMessagingReceiver({
+    onConnectionStatusChanged: function(status) {
+      console.log('Connection status:', status);
+      if (status === 'CONNECTED' || status === 1) {
+        updateChatStatus('connected');
+      }
+    },
+    onMessageReceived: function(message) {
+      console.log('Message received:', message);
+      var text = '';
+      try {
+        text = message.getMessage ? message.getMessage() : (message.message || message.text || JSON.stringify(message));
+      } catch(e) {
+        text = String(message);
+      }
+      if (text) {
+        addAgentMessage(text);
+      }
+    }
+  });
+
+  // Connect
+  if (!messaging.isConnected()) {
+    try {
+      messaging.connect();
+    } catch(e) {
+      console.error('Messaging connect error:', e);
+    }
+  }
+
+  // Create a thread for this chat session
+  var thread = new IMI.ICThread();
+  thread.setTitle('Farmers Insurance Support');
+  thread.setCategory('support');
+
+  messaging.createThread(thread, {
+    onCreateThreadComplete: function(icThread, error) {
+      if (error) {
+        console.error('Create thread error:', error);
+        // Try to use the thread object anyway
+        chatThread = thread;
+      } else {
+        chatThread = icThread;
+      }
+      sdkReady = true;
+      sdkConnecting = false;
+      updateChatStatus('connected');
+      clearSystemMessages();
+      addAgentMessage("Hi Ed! I'm your Farmers Insurance virtual assistant. How can I help you today?");
+    }
+  });
+}
+
+function sendChatMessage() {
+  var input = document.getElementById('chatInput');
+  var text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+
+  // Add user message to UI
+  addUserMessage(text);
+
+  if (!sdkReady || !chatThread) {
+    addSystemMessage('Connecting... please wait.');
+    return;
+  }
+
+  // Send via SDK
+  var message = new IMI.ICMessage();
+  message.setMessage(text);
+  message.setThread(chatThread);
+
+  var messaging = IMI.ICMessaging.getInstance();
+  messaging.publishMessage(message, {
+    onSuccess: function(msg) {
+      console.log('Message sent:', msg);
+    },
+    onFailure: function(err) {
+      console.error('Send failed:', err);
+      addSystemMessage('Message failed to send. Please try again.');
+    }
+  });
+
+  // Show typing indicator
+  showTypingIndicator();
+}
+
 function exitChat() {
-  // Return to pre-chat screen and navigate home
   document.getElementById('chat-prechat').style.display = 'flex';
-  document.getElementById('chat-widget-area').style.display = 'none';
+  document.getElementById('chat-active').style.display = 'none';
   navigateTo('home');
 }
+
+// ── Chat UI Helpers ───────────────────────────────
+function addUserMessage(text) {
+  var container = document.getElementById('chatMessages');
+  var time = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+  var html = '<div style="animation:chatSlideUp .3s ease">' +
+    '<div class="msg-bubble user">' + escapeHtml(text) + '</div>' +
+    '<div class="msg-time right">' + time + '</div></div>';
+  container.insertAdjacentHTML('beforeend', html);
+  container.scrollTop = container.scrollHeight;
+}
+
+function addAgentMessage(text) {
+  hideTypingIndicator();
+  var container = document.getElementById('chatMessages');
+  var time = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+  var html = '<div style="animation:chatSlideUp .3s ease">' +
+    '<div class="msg-bubble agent">' + escapeHtml(text) + '</div>' +
+    '<div class="msg-time">' + time + '</div></div>';
+  container.insertAdjacentHTML('beforeend', html);
+  container.scrollTop = container.scrollHeight;
+}
+
+function addSystemMessage(text) {
+  var container = document.getElementById('chatMessages');
+  var html = '<div class="system-msg" style="text-align:center;font-size:12px;color:#8e8e93;padding:8px 0;animation:chatSlideUp .3s ease">' + escapeHtml(text) + '</div>';
+  container.insertAdjacentHTML('beforeend', html);
+  container.scrollTop = container.scrollHeight;
+}
+
+function clearSystemMessages() {
+  var msgs = document.querySelectorAll('#chatMessages .system-msg');
+  msgs.forEach(function(m) { m.remove(); });
+}
+
+function showTypingIndicator() {
+  hideTypingIndicator();
+  var container = document.getElementById('chatMessages');
+  var html = '<div id="typingIndicator" class="typing-indicator" style="animation:chatSlideUp .3s ease">' +
+    '<div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>';
+  container.insertAdjacentHTML('beforeend', html);
+  container.scrollTop = container.scrollHeight;
+}
+
+function hideTypingIndicator() {
+  var ti = document.getElementById('typingIndicator');
+  if (ti) ti.remove();
+}
+
+function updateChatStatus(state) {
+  var dot = document.getElementById('chatStatusDot');
+  var txt = document.getElementById('chatStatusText');
+  if (state === 'connecting') {
+    dot.style.background = '#ff9500';
+    txt.textContent = 'Connecting...';
+  } else if (state === 'connected') {
+    dot.style.background = '#4cd964';
+    txt.textContent = 'Live · Cisco Webex Contact Center';
+  } else if (state === 'error') {
+    dot.style.background = '#ff3b30';
+    txt.textContent = 'Connection error';
+  }
+}
+
+function escapeHtml(str) {
+  var div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
 </script>
+<!-- Webex Connect JavaScript SDK -->
+<script src="assets/js/imi-environments.js"></script>
+<script src="assets/js/webex-connect-sdk.min.js"></script>
 
 </body>
 </html>
