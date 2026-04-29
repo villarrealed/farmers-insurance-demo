@@ -6,7 +6,7 @@ var imiEnvironments = {
             "appSecret": '6LWlArv9',
             "pathConfig": {
                 "assetPath": "./assets/",
-                "root": "./"
+                "root": "/"
             }
         },
         "imiclient": {
