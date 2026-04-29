@@ -1498,6 +1498,30 @@ function onRegistered() {
     },
     onMessageReceived: function(message) {
       console.log('Message received:', message);
+      console.log('Message received (full):', JSON.stringify(message));
+
+      // Check if this is a form template message from the flow
+      var interactiveData = null;
+      try { interactiveData = message.getInteractiveData ? message.getInteractiveData() : null; } catch(e){}
+      if (!interactiveData) {
+        try {
+          var raw = message.toJSON ? message.toJSON() : message;
+          if (raw.contentType === 'template' || raw.templateType === 'form' || raw.interactiveData) {
+            interactiveData = raw.interactiveData || raw;
+          }
+        } catch(e){}
+      }
+
+      if (interactiveData && !formResponseSent) {
+        console.log('=== onMessageReceived: FORM TEMPLATE detected! ===', JSON.stringify(interactiveData));
+        var tid = null;
+        try { tid = interactiveData.getTid ? interactiveData.getTid() : (interactiveData.tid || interactiveData.transactionId); } catch(e){}
+        var payload = null;
+        try { payload = interactiveData.getPayload ? interactiveData.getPayload() : interactiveData.payload; } catch(e){}
+        respondToFormTemplate(message, interactiveData, tid, payload);
+        return; // Don't display form template as a chat message
+      }
+
       hideTypingIndicator();
       var text = '';
       try {
@@ -1505,7 +1529,7 @@ function onRegistered() {
       } catch(e) {
         text = String(message);
       }
-      if (text) {
+      if (text && text !== 'Form submitted') {
         addAgentMessage(text);
       }
     }
@@ -1527,6 +1551,8 @@ function onRegistered() {
   }
 }
 
+var formResponseSent = false;
+
 function ensureThread(callback) {
   if (chatThread) { if (callback) callback(); return; }
   try {
@@ -1544,6 +1570,8 @@ function ensureThread(callback) {
       onSuccess: function(icThread) {
         console.log('Thread created (onSuccess):', icThread);
         chatThread = icThread;
+        // Auto-submit pre-chat form response after thread creation
+        autoSubmitPrechatForm();
         if (callback) callback();
       },
       onFailure: function(err) {
@@ -1570,6 +1598,298 @@ function ensureThread(callback) {
     chatThread.setTitle('Farmers Insurance Support');
     chatThread.setId('local-' + Date.now());
     if (callback) callback();
+  }
+}
+
+// ── Auto-submit pre-chat form response ────────────
+// After thread creation, the Webex Connect flow sends a form template message.
+// The Receive node waits for a form response. We fetch messages, find the form,
+// fill in values from prechatFormData, and send the response back.
+function autoSubmitPrechatForm() {
+  if (formResponseSent) return;
+  console.log('=== autoSubmitPrechatForm: waiting 2s for flow to send form template ===');
+  addSystemMessage('Setting up your session...');
+  showTypingIndicator();
+
+  // Give the flow 2 seconds to process and send the form template
+  setTimeout(function() {
+    fetchAndRespondToForm(0);
+  }, 2000);
+}
+
+function fetchAndRespondToForm(attempt) {
+  var maxAttempts = 5;
+  if (attempt >= maxAttempts) {
+    console.warn('fetchAndRespondToForm: max attempts reached, trying blind form response');
+    sendBlindFormResponse();
+    return;
+  }
+
+  var threadId;
+  try {
+    threadId = chatThread.getId ? chatThread.getId() : chatThread.id;
+  } catch(e) {
+    console.error('Cannot get thread ID:', e);
+    sendBlindFormResponse();
+    return;
+  }
+  console.log('fetchAndRespondToForm: attempt', attempt + 1, 'threadId:', threadId);
+
+  var messaging = IMI.ICMessaging.getInstance();
+  messaging.fetchMessages(threadId, null, 10, {
+    onSuccess: function(messages) {
+      console.log('fetchMessages returned', messages ? messages.length : 0, 'messages');
+      if (messages && messages.length > 0) {
+        for (var i = 0; i < messages.length; i++) {
+          var msg = messages[i];
+          console.log('  msg[' + i + ']:', JSON.stringify(msg));
+          // Look for the form template message
+          var interactiveData = null;
+          try { interactiveData = msg.getInteractiveData ? msg.getInteractiveData() : null; } catch(e){}
+          if (interactiveData) {
+            console.log('  Found interactive data:', JSON.stringify(interactiveData));
+            var payload = null;
+            try { payload = interactiveData.getPayload ? interactiveData.getPayload() : interactiveData.payload; } catch(e){}
+            var tid = null;
+            try { tid = interactiveData.getTid ? interactiveData.getTid() : interactiveData.tid; } catch(e){}
+            var templateType = null;
+            try { templateType = interactiveData.getType ? interactiveData.getType() : interactiveData.type; } catch(e){}
+
+            if (templateType === 'form' || templateType === 'template') {
+              console.log('=== FORM TEMPLATE FOUND! tid:', tid, 'payload:', JSON.stringify(payload));
+              respondToFormTemplate(msg, interactiveData, tid, payload);
+              return;
+            }
+          }
+          // Also check raw message properties
+          try {
+            var raw = msg.toJSON ? msg.toJSON() : msg;
+            if (raw.contentType === 'template' || raw.templateType === 'form') {
+              console.log('=== FORM TEMPLATE (raw) FOUND:', JSON.stringify(raw));
+              respondToFormTemplate(msg, raw, raw.transactionId || raw.tid, raw.payload);
+              return;
+            }
+          } catch(e){}
+        }
+      }
+      // Form not found yet — retry after 2s
+      console.log('No form template found yet, retrying in 2s...');
+      setTimeout(function() {
+        fetchAndRespondToForm(attempt + 1);
+      }, 2000);
+    },
+    onFailure: function(err) {
+      console.error('fetchMessages failed:', err);
+      // Retry after 2s
+      setTimeout(function() {
+        fetchAndRespondToForm(attempt + 1);
+      }, 2000);
+    }
+  });
+}
+
+function respondToFormTemplate(originalMsg, interactiveData, transactionId, payload) {
+  if (formResponseSent) return;
+  formResponseSent = true;
+  console.log('=== respondToFormTemplate: building form response ===');
+  console.log('  transactionId:', transactionId);
+  console.log('  prechatFormData:', JSON.stringify(prechatFormData));
+
+  try {
+    // Build form fields with values filled in
+    var nameField = new IMI.ICFormField();
+    nameField.setType(IMI.ICFormFieldType.Name);
+    nameField.setName('Name');
+    nameField.setLabel('Name');
+    nameField.setValue(prechatFormData.Name || 'Ed Villarreal');
+    nameField.setMandatory(true);
+
+    var emailField = new IMI.ICFormField();
+    emailField.setType(IMI.ICFormFieldType.Email);
+    emailField.setName('email');
+    emailField.setLabel('Email');
+    emailField.setValue(prechatFormData.Email || 'ed.villarreal@example.com');
+    emailField.setMandatory(true);
+
+    // Build form template attachment with filled fields
+    var formAttachment = new IMI.ICFormTemplateAttachment();
+    formAttachment.setTitle('Live Chat');
+    formAttachment.setFields([nameField, emailField]);
+    formAttachment.setTemplateId('49TMSMNT0W');
+    formAttachment.setTemplateType(IMI.ICTemplateType.Form);
+
+    // Build interactive data for the response
+    var responseData = new IMI.ICInteractiveData();
+    responseData.setType(IMI.ICTemplateType.Form);
+    responseData.setTid(transactionId);
+    responseData.setPayload(formAttachment.toJSON ? formAttachment.toJSON() : formAttachment);
+
+    // Build the response message
+    var responseMsg = new IMI.ICMessage();
+    responseMsg.setMessage('Form submitted');
+    responseMsg.setThread(chatThread);
+    responseMsg.setInteractiveData(responseData);
+    if (transactionId) {
+      responseMsg.setRelatedTransactionId(transactionId);
+    }
+
+    console.log('=== Sending form response via publishMessage ===');
+    console.log('  responseData:', JSON.stringify(responseData));
+
+    var messaging = IMI.ICMessaging.getInstance();
+    messaging.publishMessage(responseMsg, {
+      onSuccess: function(result) {
+        console.log('=== FORM RESPONSE SENT SUCCESSFULLY ===', result);
+        hideTypingIndicator();
+        clearSystemMessages();
+        addSystemMessage('Connected to agent');
+      },
+      onFailure: function(err) {
+        console.error('Form response publishMessage failed:', err);
+        // Fallback: try raw AJAX approach
+        sendFormResponseViaAjax(transactionId, formAttachment);
+      }
+    });
+  } catch(e) {
+    console.error('respondToFormTemplate error:', e);
+    // Fallback: try raw AJAX approach
+    sendFormResponseViaAjax(transactionId, null);
+  }
+}
+
+// Fallback: send form response via raw AJAX POST to /mo endpoint
+// Mimics the SDK's sendClickedEvent format
+function sendFormResponseViaAjax(transactionId, formAttachment) {
+  console.log('=== sendFormResponseViaAjax: fallback approach ===');
+
+  var threadId;
+  try { threadId = chatThread.getId ? chatThread.getId() : chatThread.id; } catch(e){ threadId = ''; }
+
+  var deviceId = localStorage.getItem('farmers_device_id') || '';
+  var appId = 'ED23175248';
+
+  // Build the form response payload
+  var formPayload = {
+    fields: [
+      { type: 'name', name: 'Name', label: 'Name', value: prechatFormData.Name || 'Ed Villarreal', mandatory: true },
+      { type: 'email', name: 'email', label: 'Email', value: prechatFormData.Email || 'ed.villarreal@example.com', mandatory: true }
+    ],
+    title: 'Live Chat',
+    templateId: '49TMSMNT0W',
+    templateType: 'form'
+  };
+
+  var payload = {
+    tid: transactionId,
+    status: 4,  // clicked/submitted status
+    clientId: deviceId,
+    appId: appId,
+    threadId: threadId,
+    interactiveData: {
+      type: 'form',
+      tid: transactionId,
+      payload: formPayload
+    }
+  };
+
+  console.log('AJAX form response payload:', JSON.stringify(payload));
+
+  // Try the /mo endpoint (used by sendClickedEvent in SDK)
+  var baseUrl = 'https://api-us.imiconnect.io';
+  $.ajax({
+    url: baseUrl + '/resources/mo',
+    type: 'POST',
+    contentType: 'application/json',
+    data: JSON.stringify(payload),
+    headers: {
+      'app-id': appId
+    },
+    success: function(resp) {
+      console.log('=== FORM RESPONSE VIA AJAX SUCCESS ===', resp);
+      hideTypingIndicator();
+      clearSystemMessages();
+      addSystemMessage('Connected to agent');
+    },
+    error: function(xhr, status, err) {
+      console.error('AJAX form response failed:', status, err, xhr.status, xhr.responseText);
+      // Try alternate URL pattern
+      $.ajax({
+        url: 'https://rtm-us.imiconnect.io/resources/mo',
+        type: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify(payload),
+        headers: { 'app-id': appId },
+        success: function(resp2) {
+          console.log('=== FORM RESPONSE VIA AJAX (rtm) SUCCESS ===', resp2);
+          hideTypingIndicator();
+          clearSystemMessages();
+          addSystemMessage('Connected to agent');
+        },
+        error: function(xhr2) {
+          console.error('AJAX form response (rtm) also failed:', xhr2.status, xhr2.responseText);
+          hideTypingIndicator();
+          clearSystemMessages();
+          addSystemMessage('Connected — waiting for agent');
+        }
+      });
+    }
+  });
+}
+
+// Blind form response: if we can't find the form template via fetchMessages,
+// send a form response anyway using the known template ID
+function sendBlindFormResponse() {
+  if (formResponseSent) return;
+  formResponseSent = true;
+  console.log('=== sendBlindFormResponse: no form template found, sending blind response ===');
+
+  // Try to send via SDK first with a synthetic transaction ID
+  try {
+    var nameField = new IMI.ICFormField();
+    nameField.setType(IMI.ICFormFieldType.Name);
+    nameField.setName('Name');
+    nameField.setLabel('Name');
+    nameField.setValue(prechatFormData.Name || 'Ed Villarreal');
+    nameField.setMandatory(true);
+
+    var emailField = new IMI.ICFormField();
+    emailField.setType(IMI.ICFormFieldType.Email);
+    emailField.setName('email');
+    emailField.setLabel('Email');
+    emailField.setValue(prechatFormData.Email || 'ed.villarreal@example.com');
+    emailField.setMandatory(true);
+
+    var formAttachment = new IMI.ICFormTemplateAttachment();
+    formAttachment.setTitle('Live Chat');
+    formAttachment.setFields([nameField, emailField]);
+    formAttachment.setTemplateId('49TMSMNT0W');
+    formAttachment.setTemplateType(IMI.ICTemplateType.Form);
+
+    var responseData = new IMI.ICInteractiveData();
+    responseData.setType(IMI.ICTemplateType.Form);
+    responseData.setPayload(formAttachment.toJSON ? formAttachment.toJSON() : formAttachment);
+
+    var responseMsg = new IMI.ICMessage();
+    responseMsg.setMessage('Form submitted');
+    responseMsg.setThread(chatThread);
+    responseMsg.setInteractiveData(responseData);
+
+    var messaging = IMI.ICMessaging.getInstance();
+    messaging.publishMessage(responseMsg, {
+      onSuccess: function(result) {
+        console.log('=== BLIND FORM RESPONSE SUCCESS ===', result);
+        hideTypingIndicator();
+        clearSystemMessages();
+        addSystemMessage('Connected to agent');
+      },
+      onFailure: function(err) {
+        console.error('Blind form response failed:', err);
+        sendFormResponseViaAjax(null, null);
+      }
+    });
+  } catch(e) {
+    console.error('sendBlindFormResponse error:', e);
+    sendFormResponseViaAjax(null, null);
   }
 }
 
@@ -1619,6 +1939,8 @@ function sendChatMessage() {
 function exitChat() {
   document.getElementById('chat-prechat').style.display = 'flex';
   document.getElementById('chat-active').style.display = 'none';
+  formResponseSent = false;
+  chatThread = null;
   navigateTo('home');
 }
 
