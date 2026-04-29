@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+    background: #f2f2f7;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+  }
+  /* Loading state while widget initializes */
+  .widget-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    gap: 12px;
+    color: #8e8e93;
+    font-size: 14px;
+  }
+  .widget-loading .spinner {
+    width: 28px; height: 28px;
+    border: 3px solid #e5e5ea;
+    border-top-color: #049fd9;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<div class="widget-loading" id="widgetLoading">
+  <div class="spinner"></div>
+  <span>Connecting to agent...</span>
+</div>
+
+<div id="divicw"
+     data-bind="1037DA7E-AED7-49C9-BF31-96C35755BA74"
+     data-org=""
+     data-guid="b4c93442-7827-4944-b60b-535e61409fae">
+</div>
+
+<script>
+(function() {
+  // Load the IMI Chat widget (same init as test.html)
+  var el = document.getElementById('divicw');
+  var script = document.createElement('script');
+  script.src = 'https://media.imi.chat/widget/js/imichatinit.js?t=' + new Date().toISOString();
+  el.insertAdjacentElement('afterend', script);
+
+  script.addEventListener('load', function() {
+    console.log('[widget-frame] IMI Chat widget script loaded');
+    autoOpenWidget();
+  });
+
+  script.addEventListener('error', function() {
+    console.error('[widget-frame] Failed to load widget script');
+    document.getElementById('widgetLoading').innerHTML =
+      '<div style="font-size:16px;">😕</div><span>Unable to load chat. Please try again.</span>';
+  });
+
+  function autoOpenWidget() {
+    var opened = false;
+    var attempts = 0;
+    var maxAttempts = 30; // 15 seconds max
+
+    function tryOpen() {
+      if (opened || attempts >= maxAttempts) {
+        if (!opened) console.warn('[widget-frame] Could not auto-open widget after', maxAttempts, 'attempts');
+        return;
+      }
+      attempts++;
+
+      // Method 1: Try widget JS API (varies by version)
+      try {
+        if (window.icwWidget && typeof icwWidget.open === 'function') {
+          icwWidget.open(); opened = true;
+          console.log('[widget-frame] Opened via icwWidget.open()');
+          onWidgetOpened(); return;
+        }
+      } catch(e) {}
+
+      // Method 2: Find and click the launcher/fab element
+      var selectors = [
+        '.icw-ChatLauncher', '[class*="ChatLauncher"]',
+        '.icw-fab', '#icwFab', '#icw-fab',
+        '[class*="Launcher"]:not(script)', '[class*="launcher"]:not(script)',
+        '[class*="widget-trigger"]', '[class*="WidgetTrigger"]'
+      ];
+      for (var i = 0; i < selectors.length; i++) {
+        try {
+          var trigger = document.querySelector(selectors[i]);
+          if (trigger && trigger.offsetParent !== null) {
+            trigger.click();
+            opened = true;
+            console.log('[widget-frame] Clicked launcher:', selectors[i]);
+            onWidgetOpened(); return;
+          }
+        } catch(e) {}
+      }
+
+      // Not found yet, retry
+      setTimeout(tryOpen, 500);
+    }
+
+    // Start trying after widget DOM has time to render
+    setTimeout(tryOpen, 800);
+  }
+
+  function onWidgetOpened() {
+    // Hide loading spinner
+    var loader = document.getElementById('widgetLoading');
+    if (loader) loader.style.display = 'none';
+
+    // Apply fullscreen styles after a short delay
+    setTimeout(applyFullscreenStyles, 600);
+    // Re-apply in case of late rendering
+    setTimeout(applyFullscreenStyles, 2000);
+  }
+
+  function applyFullscreenStyles() {
+    // Inject CSS to make widget fill the entire iframe and hide the launcher
+    var existing = document.getElementById('widgetOverrideStyles');
+    if (existing) return; // Already applied
+
+    var style = document.createElement('style');
+    style.id = 'widgetOverrideStyles';
+    style.textContent = [
+      /* Fill entire frame — target common IMI widget container selectors */
+      '[class*="ChatWindow"], [class*="chatWindow"], [class*="chat-window"],',
+      '.icw-ChatWindow, .icw-widget-container, #icw-container,',
+      '[class*="WidgetWindow"], [class*="widgetWindow"] {',
+      '  position: fixed !important;',
+      '  top: 0 !important; left: 0 !important;',
+      '  right: 0 !important; bottom: 0 !important;',
+      '  width: 100% !important; height: 100% !important;',
+      '  max-width: 100% !important; max-height: 100% !important;',
+      '  min-height: 100% !important;',
+      '  border-radius: 0 !important;',
+      '  margin: 0 !important;',
+      '  box-shadow: none !important;',
+      '  z-index: 1 !important;',
+      '}',
+      /* Hide launcher/fab button */
+      '[class*="ChatLauncher"], [class*="Launcher"], [class*="launcher"],',
+      '.icw-ChatLauncher, .icw-fab, #icwFab, #icw-fab,',
+      '[class*="fab-button"], [class*="FabButton"] {',
+      '  display: none !important;',
+      '}'
+    ].join('\n');
+    document.head.appendChild(style);
+  }
+})();
+</script>
+</body>
+</html>
