@@ -1626,29 +1626,31 @@ function ensureThread(callback) {
 }
 
 // ── Auto-submit pre-chat form response ────────────
-// The flow sends a form template after thread creation. The Receive node waits
-// for a "delivery update" (status:4) at the /deliveryupdate endpoint — NOT a
-// regular publishMessage. We need the form's transactionId to reference it.
-//
-// Strategy:
-// 1. onMessageReceived may catch the form template → sends immediately
-// 2. After 3s, fetchMessages once to find the form template's transactionId
-// 3. Send delivery update via AJAX to /deliveryupdate (same as SDK's sendClickedEvent)
+// The SW mock breaks MQTT, so onMessageReceived never fires and SDK's
+// fetchMessages returns error 6999. Instead we:
+// 1. Capture the SDK's auth headers from its AJAX calls (via ajaxSend interceptor)
+// 2. Make direct REST API calls to fetch messages and find the form template tid
+// 3. Send the delivery update (sendClickedEvent format) with proper auth headers
 function autoSubmitPrechatForm() {
   if (formResponseSent) return;
-  console.log('=== autoSubmitPrechatForm: waiting 3s then fetching form template ===');
+  console.log('=== autoSubmitPrechatForm: waiting 3s for flow to send form template ===');
 
   setTimeout(function() {
-    if (formResponseSent) return; // onMessageReceived already handled it
-    tryFetchFormTid(0);
+    if (formResponseSent) return;
+    directFetchFormTid(0);
   }, 3000);
 }
 
-function tryFetchFormTid(attempt) {
+function directFetchFormTid(attempt) {
   if (formResponseSent) return;
-  if (attempt >= 3) {
-    console.warn('=== tryFetchFormTid: max attempts, trying sendClickedEvent without tid ===');
-    sendFormDeliveryUpdate(null);
+  if (attempt >= 5) {
+    console.warn('=== directFetchFormTid: max attempts, giving up ===');
+    return;
+  }
+
+  if (!capturedSdkHeaders || !capturedBaseUrl) {
+    console.log('Waiting for SDK headers... attempt', attempt + 1);
+    setTimeout(function() { directFetchFormTid(attempt + 1); }, 2000);
     return;
   }
 
@@ -1657,68 +1659,75 @@ function tryFetchFormTid(attempt) {
     threadId = chatThread.getId ? chatThread.getId() : chatThread.id;
   } catch(e) {
     console.error('Cannot get thread ID:', e);
-    sendFormDeliveryUpdate(null);
     return;
   }
-  console.log('tryFetchFormTid: attempt', attempt + 1, 'threadId:', threadId);
 
-  try {
-    var messaging = IMI.ICMessaging.getInstance();
-    messaging.fetchMessages(threadId, null, 10, {
-      onSuccess: function(messages) {
-        if (formResponseSent) return;
-        console.log('fetchMessages returned', messages ? messages.length : 0, 'messages');
-        if (messages) {
-          for (var i = 0; i < messages.length; i++) {
-            var msg = messages[i];
-            var tid = null;
-            try { tid = msg.getTransactionId ? msg.getTransactionId() : null; } catch(e){}
-            var iData = null;
-            try { iData = msg.getInteractiveData ? msg.getInteractiveData() : null; } catch(e){}
-            var mText = '';
-            try { mText = msg.getMessage ? msg.getMessage() : ''; } catch(e){}
-            var mType = '';
-            try { mType = msg.getType ? msg.getType() : ''; } catch(e){}
-            console.log('  msg[' + i + ']: tid=' + tid + ' type=' + mType + ' msg=' + (mText||'').substring(0,100) + ' iData=' + !!iData);
+  // Direct REST call to fetch messages — same URL the SDK uses but we parse the response ourselves
+  var messagesUrl = capturedBaseUrl + '/apps/ED23175248/user/ed.villarreal/threads/' + threadId + '/messages?from=&limit=10';
+  console.log('directFetchFormTid: attempt', attempt + 1, 'URL:', messagesUrl);
 
-            var isForm = false;
-            // Check interactiveData
-            if (iData) {
+  $.ajax({
+    url: messagesUrl,
+    type: 'GET',
+    headers: capturedSdkHeaders,
+    success: function(resp) {
+      console.log('Direct fetchMessages response:', resp);
+      if (formResponseSent) return;
+
+      // Parse the response to find the form template message
+      var messages = null;
+      if (resp && resp.messages) messages = resp.messages;
+      else if (resp && Array.isArray(resp)) messages = resp;
+      else if (typeof resp === 'string') {
+        try { var parsed = JSON.parse(resp); messages = parsed.messages || parsed; } catch(e){}
+      }
+
+      if (messages && messages.length > 0) {
+        for (var i = 0; i < messages.length; i++) {
+          var msg = messages[i];
+          console.log('  msg[' + i + ']:', JSON.stringify(msg).substring(0, 300));
+
+          var tid = msg.tid || msg.transactionId || null;
+          var msgText = msg.message || '';
+          var iData = msg.interactiveData || null;
+
+          var isForm = false;
+          // Check interactiveData
+          if (iData) {
+            if (iData.type === 'form' || iData.type === 'template' || iData.templateType === 'form') isForm = true;
+          }
+          // Check message text for template markers
+          if (!isForm && msgText && typeof msgText === 'string') {
+            var ml = msgText.toLowerCase();
+            if (ml.indexOf('49tmsmnt0w') !== -1 || ml.indexOf('templatetype') !== -1 || ml.indexOf('contenttype') !== -1) isForm = true;
+            if (!isForm) {
               try {
-                var iType = iData.getType ? iData.getType() : (iData.type || '');
-                if (iType === 'form' || iType === 'template') isForm = true;
+                var p = JSON.parse(msgText);
+                if (p && (p.templateType === 'form' || p.contentType === 'template' || p.templateId === '49TMSMNT0W')) isForm = true;
               } catch(e){}
             }
-            // Check message text
-            if (!isForm && mText && typeof mText === 'string') {
-              var ml = mText.toLowerCase();
-              if (ml.indexOf('49tmsmnt0w') !== -1 || ml.indexOf('templatetype') !== -1) isForm = true;
-            }
+          }
 
-            if (isForm && tid) {
-              console.log('=== FORM TEMPLATE FOUND via fetchMessages! tid:', tid, '===');
-              sendFormDeliveryUpdate(tid);
-              return;
-            }
+          if (isForm && tid) {
+            console.log('=== FORM TEMPLATE FOUND! tid:', tid, '===');
+            sendFormDeliveryUpdate(tid);
+            return;
           }
         }
-        // Not found yet, retry after 2s
-        console.log('No form template found, retrying in 2s...');
-        setTimeout(function() { tryFetchFormTid(attempt + 1); }, 2000);
-      },
-      onFailure: function(err) {
-        console.error('fetchMessages failed:', err);
-        setTimeout(function() { tryFetchFormTid(attempt + 1); }, 2000);
       }
-    });
-  } catch(e) {
-    console.error('tryFetchFormTid error:', e);
-    sendFormDeliveryUpdate(null);
-  }
+
+      // Not found yet — retry
+      console.log('No form template in messages, retrying in 2s...');
+      setTimeout(function() { directFetchFormTid(attempt + 1); }, 2000);
+    },
+    error: function(xhr, status, err) {
+      console.error('Direct fetchMessages failed:', xhr.status, xhr.responseText);
+      setTimeout(function() { directFetchFormTid(attempt + 1); }, 2000);
+    }
+  });
 }
 
-// Send the form response as a delivery update to /deliveryupdate
-// This replicates what the SDK's sendClickedEvent does internally
+// Send the form response as a delivery update using captured SDK auth headers
 function sendFormDeliveryUpdate(transactionId) {
   if (formResponseSent) return;
   formResponseSent = true;
@@ -1727,29 +1736,28 @@ function sendFormDeliveryUpdate(transactionId) {
   var formPayload = {
     fields: [
       { type: 'name', name: 'Name', label: 'Name', value: prechatFormData.Name || 'Ed Villarreal', mandatory: true },
-      { type: 'email', name: 'email', label: 'Email', value: prechatFormData.Email || 'ed.villarreal@example.com', mandatory: true }
+      { type: 'email', name: 'email', label: 'Email', value: prechatFormData.Email || 'ed.villarreal@farmers.com', mandatory: true }
     ],
     title: 'Live Chat',
     templateId: '49TMSMNT0W',
     templateType: 'form'
   };
 
-  // Try SDK's sendClickedEvent first (if accessible)
+  // Try SDK's sendClickedEvent first (uses internal auth + clientId)
   try {
     var messaging = IMI.ICMessaging.getInstance();
     if (typeof messaging.sendClickedEvent === 'function' && transactionId) {
-      console.log('=== Trying SDK sendClickedEvent ===');
+      console.log('=== Trying SDK sendClickedEvent with tid:', transactionId, '===');
       var iData = new IMI.ICInteractiveData();
       iData.setType(IMI.ICTemplateType.Form);
       iData.setTitle('Live Chat');
       iData.setPayload(formPayload);
-      // sendClickedEvent(tid, interactiveDataObj, callback)
       messaging.sendClickedEvent(transactionId, iData, {
         onSuccess: function(result) {
           console.log('=== sendClickedEvent SUCCESS ===', result);
         },
         onFailure: function(err) {
-          console.error('sendClickedEvent failed:', err);
+          console.error('sendClickedEvent failed, trying direct AJAX:', err);
           sendFormDeliveryUpdateViaAjax(transactionId, formPayload);
         }
       });
@@ -1759,7 +1767,6 @@ function sendFormDeliveryUpdate(transactionId) {
     console.error('sendClickedEvent error:', e);
   }
 
-  // Fallback: direct AJAX to /deliveryupdate endpoint
   sendFormDeliveryUpdateViaAjax(transactionId, formPayload);
 }
 
@@ -1778,23 +1785,42 @@ function sendFormDeliveryUpdateViaAjax(transactionId, formPayload) {
     }
   };
 
-  // Replicate SDK's sendClickedEvent: POST to elbZeroRatingURL + "/" + appName + "/deliveryupdate"
-  // elbZeroRatingURL = authdomain + "/api/v3" = https://rtm-us.imiconnect.io/rtmsAPI/api/v3
-  var url = 'https://rtm-us.imiconnect.io/rtmsAPI/api/v3/ED23175248/deliveryupdate';
+  // Use the actual base URL captured from SDK requests (not the config URL)
+  var baseUrl = capturedBaseUrl || 'https://rtm-us.imiconnect.io/rtmsAPI/api/v3';
+  var url = baseUrl + '/ED23175248/deliveryupdate';
+
+  // Use captured SDK headers (includes secretKey + accessToken)
+  var headers = capturedSdkHeaders ? Object.assign({}, capturedSdkHeaders) : { 'secretKey': '6LWlArv9' };
+  headers['Content-Type'] = 'application/json';
 
   console.log('AJAX delivery update URL:', url);
+  console.log('AJAX delivery update headers:', Object.keys(headers).join(', '));
   console.log('AJAX delivery update payload:', JSON.stringify(payload));
 
   $.ajax({
     url: url,
     type: 'POST',
-    contentType: 'application/json',
-    headers: {
-      'secretKey': '6LWlArv9'
-    },
+    headers: headers,
     data: JSON.stringify(payload),
     success: function(resp) {
-      console.log('=== DELIVERY UPDATE SUCCESS ===', resp);
+      console.log('=== DELIVERY UPDATE RESPONSE ===', resp);
+      if (resp && resp.code === 0) {
+        console.log('=== DELIVERY UPDATE SUCCESS ===');
+      } else if (resp && resp.code === 43) {
+        console.error('Still invalid access token — trying alternate URL');
+        // Try with the other base URL
+        var altUrl = (baseUrl.indexOf('cctsartms2') !== -1)
+          ? 'https://rtm-us.imiconnect.io/rtmsAPI/api/v3/ED23175248/deliveryupdate'
+          : capturedBaseUrl + '/ED23175248/deliveryupdate';
+        $.ajax({
+          url: altUrl,
+          type: 'POST',
+          headers: headers,
+          data: JSON.stringify(payload),
+          success: function(r2) { console.log('=== ALT DELIVERY UPDATE ===', r2); },
+          error: function(x2) { console.error('Alt delivery update failed:', x2.status, x2.responseText); }
+        });
+      }
     },
     error: function(xhr, status, err) {
       console.error('Delivery update failed:', xhr.status, xhr.statusText, xhr.responseText);
@@ -1924,7 +1950,23 @@ function escapeHtml(str) {
 <!-- jQuery (required by Webex Connect SDK) -->
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script>
-// Global AJAX error interceptor — captures ALL failed HTTP requests from the SDK
+// Global AJAX interceptors — capture SDK auth headers for our own API calls
+var capturedSdkHeaders = null;
+var capturedBaseUrl = null;
+$(document).ajaxSend(function(event, jqXHR, settings) {
+  // Capture headers from SDK requests (they contain secretKey + accessToken)
+  if (settings.headers && settings.headers.secretKey) {
+    capturedSdkHeaders = Object.assign({}, settings.headers);
+    console.log('Captured SDK headers:', Object.keys(capturedSdkHeaders).join(', '));
+  }
+  // Capture the actual base URL the SDK uses (may differ from config)
+  if (settings.url && settings.url.indexOf('/rtmsAPI/') !== -1) {
+    var match = settings.url.match(/(https?:\/\/[^\/]+\/rtmsAPI\/api\/v\d+)/);
+    if (match) {
+      capturedBaseUrl = match[1];
+    }
+  }
+});
 $(document).ajaxError(function(event, jqXHR, settings, thrownError) {
   console.error('AJAX ERROR:', settings.type, settings.url, 'status:', jqXHR.status, jqXHR.statusText);
   try { console.error('AJAX response:', jqXHR.responseText); } catch(x){}
