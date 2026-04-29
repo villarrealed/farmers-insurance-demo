@@ -1497,37 +1497,63 @@ function onRegistered() {
       }
     },
     onMessageReceived: function(message) {
-      console.log('Message received:', message);
-      try { console.log('Message received (detail):', JSON.stringify(message)); } catch(e) { console.log('Message received (non-serializable)'); }
+      console.log('=== onMessageReceived ===');
+      // Log all properties to understand the message format
+      var tid = null, msgText = '', iData = null, msgType = '';
+      try { tid = message.getTransactionId ? message.getTransactionId() : null; } catch(e){}
+      try { msgText = message.getMessage ? message.getMessage() : ''; } catch(e){}
+      try { iData = message.getInteractiveData ? message.getInteractiveData() : null; } catch(e){}
+      try { msgType = message.getType ? message.getType() : ''; } catch(e){}
+      console.log('  tid:', tid);
+      console.log('  type:', msgType);
+      console.log('  message:', msgText);
+      console.log('  interactiveData:', iData);
+      try { console.log('  extras:', message.getExtras ? message.getExtras() : 'N/A'); } catch(e){}
+      try { console.log('  outgoing:', message.getOutgoing ? message.getOutgoing() : 'N/A'); } catch(e){}
+      try { console.log('  status:', message.getStatus ? message.getStatus() : 'N/A'); } catch(e){}
 
-      // Check if this is the form template message — grab its transactionId
-      if (!formResponseSent) {
-        var tid = null;
-        try { tid = message.getTransactionId ? message.getTransactionId() : null; } catch(e){}
-        var interactiveData = null;
-        try { interactiveData = message.getInteractiveData ? message.getInteractiveData() : null; } catch(e){}
+      // Detect form template by ANY indicator
+      if (!formResponseSent && tid) {
+        var isForm = false;
 
-        if (tid && interactiveData) {
-          var iType = null;
-          try { iType = interactiveData.getType ? interactiveData.getType() : null; } catch(e){}
-          console.log('=== onMessageReceived: interactive msg, tid:', tid, 'type:', iType, '===');
-          if (iType === 'form' || iType === 'template') {
-            console.log('=== FORM TEMPLATE via onMessageReceived! Sending delivery update ===');
-            sendFormDeliveryUpdate(tid);
-            return; // Don't display form template
+        // Check 1: interactiveData has form/template type
+        if (iData) {
+          try {
+            var iType = iData.getType ? iData.getType() : (iData.type || '');
+            if (iType === 'form' || iType === 'template') isForm = true;
+          } catch(e){}
+        }
+
+        // Check 2: message text contains form template markers
+        if (!isForm && msgText && typeof msgText === 'string') {
+          var ml = msgText.toLowerCase();
+          if (ml.indexOf('49tmsmnt0w') !== -1 ||
+              ml.indexOf('"templatetype":"form"') !== -1 ||
+              ml.indexOf('"contenttype":"template"') !== -1 ||
+              ml.indexOf('templatetype') !== -1) {
+            isForm = true;
           }
+          // Try parsing as JSON
+          if (!isForm) {
+            try {
+              var parsed = JSON.parse(msgText);
+              if (parsed && (parsed.templateType === 'form' || parsed.contentType === 'template' || parsed.templateId === '49TMSMNT0W')) {
+                isForm = true;
+              }
+            } catch(e) {}
+          }
+        }
+
+        if (isForm) {
+          console.log('=== FORM TEMPLATE DETECTED! tid:', tid, '===');
+          sendFormDeliveryUpdate(tid);
+          return;
         }
       }
 
       hideTypingIndicator();
-      var text = '';
-      try {
-        text = message.getMessage ? message.getMessage() : (message.message || message.text || '');
-      } catch(e) {
-        try { text = String(message); } catch(e2) { text = ''; }
-      }
-      if (text) {
-        addAgentMessage(text);
+      if (msgText) {
+        addAgentMessage(msgText);
       }
     }
   });
@@ -1649,15 +1675,30 @@ function tryFetchFormTid(attempt) {
             try { tid = msg.getTransactionId ? msg.getTransactionId() : null; } catch(e){}
             var iData = null;
             try { iData = msg.getInteractiveData ? msg.getInteractiveData() : null; } catch(e){}
-            if (tid && iData) {
-              var iType = null;
-              try { iType = iData.getType ? iData.getType() : null; } catch(e){}
-              console.log('  msg[' + i + ']: tid=' + tid + ' type=' + iType);
-              if (iType === 'form' || iType === 'template') {
-                console.log('=== FORM TEMPLATE FOUND via fetchMessages! tid:', tid, '===');
-                sendFormDeliveryUpdate(tid);
-                return;
-              }
+            var mText = '';
+            try { mText = msg.getMessage ? msg.getMessage() : ''; } catch(e){}
+            var mType = '';
+            try { mType = msg.getType ? msg.getType() : ''; } catch(e){}
+            console.log('  msg[' + i + ']: tid=' + tid + ' type=' + mType + ' msg=' + (mText||'').substring(0,100) + ' iData=' + !!iData);
+
+            var isForm = false;
+            // Check interactiveData
+            if (iData) {
+              try {
+                var iType = iData.getType ? iData.getType() : (iData.type || '');
+                if (iType === 'form' || iType === 'template') isForm = true;
+              } catch(e){}
+            }
+            // Check message text
+            if (!isForm && mText && typeof mText === 'string') {
+              var ml = mText.toLowerCase();
+              if (ml.indexOf('49tmsmnt0w') !== -1 || ml.indexOf('templatetype') !== -1) isForm = true;
+            }
+
+            if (isForm && tid) {
+              console.log('=== FORM TEMPLATE FOUND via fetchMessages! tid:', tid, '===');
+              sendFormDeliveryUpdate(tid);
+              return;
             }
           }
         }
