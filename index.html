@@ -1499,6 +1499,26 @@ function onRegistered() {
     onMessageReceived: function(message) {
       console.log('Message received:', message);
       try { console.log('Message received (detail):', JSON.stringify(message)); } catch(e) { console.log('Message received (non-serializable)'); }
+
+      // Check if this is the form template message — grab its transactionId
+      if (!formResponseSent) {
+        var tid = null;
+        try { tid = message.getTransactionId ? message.getTransactionId() : null; } catch(e){}
+        var interactiveData = null;
+        try { interactiveData = message.getInteractiveData ? message.getInteractiveData() : null; } catch(e){}
+
+        if (tid && interactiveData) {
+          var iType = null;
+          try { iType = interactiveData.getType ? interactiveData.getType() : null; } catch(e){}
+          console.log('=== onMessageReceived: interactive msg, tid:', tid, 'type:', iType, '===');
+          if (iType === 'form' || iType === 'template') {
+            console.log('=== FORM TEMPLATE via onMessageReceived! Sending delivery update ===');
+            sendFormDeliveryUpdate(tid);
+            return; // Don't display form template
+          }
+        }
+      }
+
       hideTypingIndicator();
       var text = '';
       try {
@@ -1580,60 +1600,165 @@ function ensureThread(callback) {
 }
 
 // ── Auto-submit pre-chat form response ────────────
-// The flow sends a form template (templateId 49TMSMNT0W) after thread creation,
-// then the Receive node waits for a form response. We send the response with
-// filled-in Name/Email values after a short delay.
+// The flow sends a form template after thread creation. The Receive node waits
+// for a "delivery update" (status:4) at the /deliveryupdate endpoint — NOT a
+// regular publishMessage. We need the form's transactionId to reference it.
+//
+// Strategy:
+// 1. onMessageReceived may catch the form template → sends immediately
+// 2. After 3s, fetchMessages once to find the form template's transactionId
+// 3. Send delivery update via AJAX to /deliveryupdate (same as SDK's sendClickedEvent)
 function autoSubmitPrechatForm() {
   if (formResponseSent) return;
-  formResponseSent = true;
-  console.log('=== autoSubmitPrechatForm: will send form response in 3s ===');
+  console.log('=== autoSubmitPrechatForm: waiting 3s then fetching form template ===');
 
   setTimeout(function() {
-    try {
-      var nameField = new IMI.ICFormField();
-      nameField.setType(IMI.ICFormFieldType.Name);
-      nameField.setName('Name');
-      nameField.setLabel('Name');
-      nameField.setValue(prechatFormData.Name || 'Ed Villarreal');
-      nameField.setMandatory(true);
+    if (formResponseSent) return; // onMessageReceived already handled it
+    tryFetchFormTid(0);
+  }, 3000);
+}
 
-      var emailField = new IMI.ICFormField();
-      emailField.setType(IMI.ICFormFieldType.Email);
-      emailField.setName('email');
-      emailField.setLabel('Email');
-      emailField.setValue(prechatFormData.Email || 'ed.villarreal@example.com');
-      emailField.setMandatory(true);
+function tryFetchFormTid(attempt) {
+  if (formResponseSent) return;
+  if (attempt >= 3) {
+    console.warn('=== tryFetchFormTid: max attempts, trying sendClickedEvent without tid ===');
+    sendFormDeliveryUpdate(null);
+    return;
+  }
 
-      var formAttachment = new IMI.ICFormTemplateAttachment();
-      formAttachment.setTitle('Live Chat');
-      formAttachment.setFields([nameField, emailField]);
-      formAttachment.setTemplateId('49TMSMNT0W');
-      formAttachment.setTemplateType(IMI.ICTemplateType.Form);
+  var threadId;
+  try {
+    threadId = chatThread.getId ? chatThread.getId() : chatThread.id;
+  } catch(e) {
+    console.error('Cannot get thread ID:', e);
+    sendFormDeliveryUpdate(null);
+    return;
+  }
+  console.log('tryFetchFormTid: attempt', attempt + 1, 'threadId:', threadId);
 
-      var responseData = new IMI.ICInteractiveData();
-      responseData.setType(IMI.ICTemplateType.Form);
-      responseData.setPayload(formAttachment.toJSON ? formAttachment.toJSON() : formAttachment);
+  try {
+    var messaging = IMI.ICMessaging.getInstance();
+    messaging.fetchMessages(threadId, null, 10, {
+      onSuccess: function(messages) {
+        if (formResponseSent) return;
+        console.log('fetchMessages returned', messages ? messages.length : 0, 'messages');
+        if (messages) {
+          for (var i = 0; i < messages.length; i++) {
+            var msg = messages[i];
+            var tid = null;
+            try { tid = msg.getTransactionId ? msg.getTransactionId() : null; } catch(e){}
+            var iData = null;
+            try { iData = msg.getInteractiveData ? msg.getInteractiveData() : null; } catch(e){}
+            if (tid && iData) {
+              var iType = null;
+              try { iType = iData.getType ? iData.getType() : null; } catch(e){}
+              console.log('  msg[' + i + ']: tid=' + tid + ' type=' + iType);
+              if (iType === 'form' || iType === 'template') {
+                console.log('=== FORM TEMPLATE FOUND via fetchMessages! tid:', tid, '===');
+                sendFormDeliveryUpdate(tid);
+                return;
+              }
+            }
+          }
+        }
+        // Not found yet, retry after 2s
+        console.log('No form template found, retrying in 2s...');
+        setTimeout(function() { tryFetchFormTid(attempt + 1); }, 2000);
+      },
+      onFailure: function(err) {
+        console.error('fetchMessages failed:', err);
+        setTimeout(function() { tryFetchFormTid(attempt + 1); }, 2000);
+      }
+    });
+  } catch(e) {
+    console.error('tryFetchFormTid error:', e);
+    sendFormDeliveryUpdate(null);
+  }
+}
 
-      var responseMsg = new IMI.ICMessage();
-      responseMsg.setMessage('Form submitted');
-      responseMsg.setThread(chatThread);
-      responseMsg.setInteractiveData(responseData);
+// Send the form response as a delivery update to /deliveryupdate
+// This replicates what the SDK's sendClickedEvent does internally
+function sendFormDeliveryUpdate(transactionId) {
+  if (formResponseSent) return;
+  formResponseSent = true;
+  console.log('=== sendFormDeliveryUpdate: tid:', transactionId, '===');
 
-      console.log('=== Sending form response via publishMessage ===');
+  var formPayload = {
+    fields: [
+      { type: 'name', name: 'Name', label: 'Name', value: prechatFormData.Name || 'Ed Villarreal', mandatory: true },
+      { type: 'email', name: 'email', label: 'Email', value: prechatFormData.Email || 'ed.villarreal@example.com', mandatory: true }
+    ],
+    title: 'Live Chat',
+    templateId: '49TMSMNT0W',
+    templateType: 'form'
+  };
 
-      var messaging = IMI.ICMessaging.getInstance();
-      messaging.publishMessage(responseMsg, {
+  // Try SDK's sendClickedEvent first (if accessible)
+  try {
+    var messaging = IMI.ICMessaging.getInstance();
+    if (typeof messaging.sendClickedEvent === 'function' && transactionId) {
+      console.log('=== Trying SDK sendClickedEvent ===');
+      var iData = new IMI.ICInteractiveData();
+      iData.setType(IMI.ICTemplateType.Form);
+      iData.setTitle('Live Chat');
+      iData.setPayload(formPayload);
+      // sendClickedEvent(tid, interactiveDataObj, callback)
+      messaging.sendClickedEvent(transactionId, iData, {
         onSuccess: function(result) {
-          console.log('=== FORM RESPONSE SENT ===', result);
+          console.log('=== sendClickedEvent SUCCESS ===', result);
         },
         onFailure: function(err) {
-          console.error('Form response failed:', err);
+          console.error('sendClickedEvent failed:', err);
+          sendFormDeliveryUpdateViaAjax(transactionId, formPayload);
         }
       });
-    } catch(e) {
-      console.error('autoSubmitPrechatForm error:', e);
+      return;
     }
-  }, 3000);
+  } catch(e) {
+    console.error('sendClickedEvent error:', e);
+  }
+
+  // Fallback: direct AJAX to /deliveryupdate endpoint
+  sendFormDeliveryUpdateViaAjax(transactionId, formPayload);
+}
+
+function sendFormDeliveryUpdateViaAjax(transactionId, formPayload) {
+  console.log('=== sendFormDeliveryUpdateViaAjax ===');
+
+  var deviceId = localStorage.getItem('farmers_device_id') || '';
+
+  var payload = {
+    tid: transactionId || '',
+    status: 4,
+    clientId: deviceId,
+    interactiveData: {
+      type: 'form',
+      payload: formPayload
+    }
+  };
+
+  // Replicate SDK's sendClickedEvent: POST to elbZeroRatingURL + "/" + appName + "/deliveryupdate"
+  // elbZeroRatingURL = authdomain + "/api/v3" = https://rtm-us.imiconnect.io/rtmsAPI/api/v3
+  var url = 'https://rtm-us.imiconnect.io/rtmsAPI/api/v3/ED23175248/deliveryupdate';
+
+  console.log('AJAX delivery update URL:', url);
+  console.log('AJAX delivery update payload:', JSON.stringify(payload));
+
+  $.ajax({
+    url: url,
+    type: 'POST',
+    contentType: 'application/json',
+    headers: {
+      'secretKey': '6LWlArv9'
+    },
+    data: JSON.stringify(payload),
+    success: function(resp) {
+      console.log('=== DELIVERY UPDATE SUCCESS ===', resp);
+    },
+    error: function(xhr, status, err) {
+      console.error('Delivery update failed:', xhr.status, xhr.statusText, xhr.responseText);
+    }
+  });
 }
 
 function sendChatMessage() {
