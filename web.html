@@ -71,6 +71,217 @@
     min-height: 100vh;
   }
 
+  #app-wrapper {
+    display: none;
+    opacity: 0;
+    transform: translateY(22px);
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity .55s ease, transform .55s ease, visibility .55s ease;
+  }
+
+  #app-wrapper.app-visible {
+    display: block;
+    opacity: 1;
+    transform: translateY(0);
+    visibility: visible;
+    pointer-events: auto;
+  }
+
+  .login-view {
+    position: fixed;
+    inset: 0;
+    z-index: 35;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    background:
+      radial-gradient(circle at top right, rgba(255,255,255,.15) 0%, transparent 36%),
+      radial-gradient(circle at bottom left, rgba(4,159,217,.14) 0%, transparent 34%),
+      linear-gradient(145deg, #d92b31 0%, #a51b20 42%, #621114 100%);
+    transition: opacity .45s ease, visibility .45s ease;
+  }
+
+  .login-view::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(90deg, rgba(255,255,255,.05) 1px, transparent 1px),
+      linear-gradient(rgba(255,255,255,.05) 1px, transparent 1px);
+    background-size: 34px 34px;
+    mask-image: radial-gradient(circle at center, black 34%, transparent 90%);
+    opacity: .55;
+    pointer-events: none;
+  }
+
+  .login-view.is-leaving {
+    opacity: 0;
+    visibility: hidden;
+  }
+
+  .login-card {
+    position: relative;
+    z-index: 1;
+    width: min(1040px, 100%);
+    display: grid;
+    grid-template-columns: minmax(0, 1.06fr) minmax(320px, 420px);
+    overflow: hidden;
+    border-radius: 32px;
+    border: 1px solid rgba(255,255,255,.18);
+    background: rgba(255,255,255,.12);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    box-shadow: 0 34px 90px rgba(0,0,0,.28);
+    transition: transform .45s ease, opacity .45s ease;
+  }
+
+  .login-view.is-leaving .login-card {
+    opacity: 0;
+    transform: translateY(24px) scale(.98);
+  }
+
+  .login-hero {
+    padding: 44px;
+    color: #fff;
+    background:
+      radial-gradient(circle at top right, rgba(255,255,255,.18) 0%, transparent 42%),
+      linear-gradient(160deg, rgba(255,255,255,.08) 0%, rgba(255,255,255,.02) 100%);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 28px;
+  }
+
+  .login-hero::after {
+    content: "";
+    position: absolute;
+    right: -50px;
+    bottom: -70px;
+    width: 240px;
+    height: 240px;
+    background: radial-gradient(circle, rgba(255,255,255,.18) 0%, transparent 68%);
+  }
+
+  .login-brand-lockup {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .login-brand-copy {
+    min-width: 0;
+  }
+
+  .login-brand-copy .brand-title,
+  .login-brand-copy .brand-sub {
+    color: #fff;
+  }
+
+  .login-brand-copy .brand-sub {
+    opacity: .78;
+  }
+
+  .login-hero .eyebrow {
+    color: rgba(255,255,255,.8);
+  }
+
+  .login-hero .lead {
+    color: rgba(255,255,255,.86);
+    max-width: 42ch;
+  }
+
+  .login-stat-strip {
+    display: grid;
+    gap: 12px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .login-stat {
+    padding: 14px 16px;
+    border-radius: 18px;
+    background: rgba(255,255,255,.12);
+    border: 1px solid rgba(255,255,255,.12);
+  }
+
+  .login-stat strong {
+    display: block;
+    font-size: 1rem;
+    margin-bottom: 4px;
+  }
+
+  .login-stat span {
+    font-size: .88rem;
+    color: rgba(255,255,255,.74);
+  }
+
+  .login-panel {
+    background: rgba(255,255,255,.96);
+    padding: 42px 34px 30px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .login-panel .eyebrow {
+    margin-bottom: 10px;
+  }
+
+  .login-form {
+    display: grid;
+    gap: 16px;
+    margin-top: 22px;
+  }
+
+  .login-field {
+    display: grid;
+    gap: 8px;
+  }
+
+  .login-signin {
+    width: 100%;
+    border: none;
+    border-radius: 16px;
+    background: linear-gradient(135deg, var(--brand) 0%, var(--brand-deep) 100%);
+    color: #fff;
+    padding: 16px 18px;
+    font: 800 1rem/1 "Avenir Next", "Segoe UI", sans-serif;
+    cursor: pointer;
+    box-shadow: 0 18px 34px rgba(204,34,40,.24);
+    transition: transform .2s ease, box-shadow .2s ease;
+  }
+
+  .login-signin:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 22px 38px rgba(204,34,40,.28);
+  }
+
+  .login-aux {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: center;
+    margin-top: 6px;
+  }
+
+  .text-link {
+    border: none;
+    background: none;
+    padding: 0;
+    color: var(--brand);
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .login-footer {
+    margin-top: 28px;
+    color: var(--muted);
+    font-size: .88rem;
+    line-height: 1.6;
+  }
+
   .topbar {
     position: sticky;
     top: 0;
@@ -1090,6 +1301,9 @@
     .policy-stats,
     .id-grid,
     .modal-actions { grid-template-columns: 1fr; }
+    .login-card { grid-template-columns: 1fr; }
+    .login-hero,
+    .login-panel { padding: 28px 22px; }
   }
 
   @media (max-width: 560px) {
@@ -1115,11 +1329,72 @@
     .modal { padding: 14px; }
     .modal-card { padding: 20px; }
     .hide-mobile { display: none; }
+    .login-aux { flex-direction: column; align-items: flex-start; }
   }
   </style>
 </head>
 <body>
-  <div class="site-wrap">
+  <div class="login-view" id="login-view">
+    <div class="login-card">
+      <div class="login-hero">
+        <div>
+          <div class="login-brand-lockup">
+            <div class="brand-mark">F</div>
+            <div class="login-brand-copy">
+              <div class="brand-title">Farmers Insurance</div>
+              <div class="brand-sub">Customer Portal Demo</div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="eyebrow">Welcome back</div>
+          <h1>Manage your coverage with confidence.</h1>
+          <p class="lead">Sign in to access policy details, claims support, payments, and live chat assistance in this responsive Farmers portal experience.</p>
+        </div>
+
+        <div class="login-stat-strip">
+          <div class="login-stat">
+            <strong>Claims & billing in one place</strong>
+            <span>Review payment activity, coverage, and support options instantly.</span>
+          </div>
+          <div class="login-stat">
+            <strong>Powered by Cisco Webex</strong>
+            <span>Live chat support is available directly from the portal after sign-in.</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="login-panel">
+        <div class="eyebrow">Customer Portal</div>
+        <h2>Sign in to continue</h2>
+        <p class="lead" style="font-size:.98rem; max-width:32ch;">Use the demo credentials below to enter the Farmers Insurance portal.</p>
+
+        <form class="login-form" onsubmit="event.preventDefault(); doLogin();">
+          <div class="login-field">
+            <label for="loginUsername">Username</label>
+            <input id="loginUsername" type="text" value="ed.villarreal" autocomplete="username">
+          </div>
+
+          <div class="login-field">
+            <label for="loginPassword">Password</label>
+            <input id="loginPassword" type="password" value="demo2025" autocomplete="current-password">
+          </div>
+
+          <button class="login-signin" type="submit">Sign In</button>
+        </form>
+
+        <div class="login-aux">
+          <button class="text-link" type="button" onclick="showToast('Password reset is unavailable in demo mode')">Forgot password?</button>
+          <span class="list-note">Demo account · Secure portal preview</span>
+        </div>
+
+        <div class="login-footer">© 2025 Farmers Insurance · Demo Portal Experience</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="site-wrap" id="app-wrapper" aria-hidden="true">
     <header class="topbar">
       <div class="topbar-inner">
         <div class="brand">
@@ -1756,7 +2031,7 @@
                 </div>
                 <span>›</span>
               </button>
-              <button class="settings-row" type="button" onclick="showToast('Signed out')">
+              <button class="settings-row" type="button" onclick="doLogout()">
                 <div class="settings-copy">
                   <div class="row-icon" style="background:#fff1f1;">↩️</div>
                   <div>
@@ -1808,6 +2083,52 @@
 
   <script>
     const views = ['home', 'policy', 'claims', 'payments', 'chat', 'profile'];
+
+    function doLogin() {
+      const username = (document.getElementById('loginUsername').value || '').trim();
+      const password = (document.getElementById('loginPassword').value || '').trim();
+
+      if (!username || !password) {
+        showToast('Please enter your username and password');
+        return;
+      }
+
+      const loginView = document.getElementById('login-view');
+      const appWrapper = document.getElementById('app-wrapper');
+
+      loginView.classList.add('is-leaving');
+
+      window.setTimeout(function() {
+        loginView.style.display = 'none';
+        appWrapper.style.display = 'block';
+        appWrapper.setAttribute('aria-hidden', 'false');
+
+        window.requestAnimationFrame(function() {
+          appWrapper.classList.add('app-visible');
+        });
+      }, 360);
+    }
+
+    function doLogout() {
+      const loginView = document.getElementById('login-view');
+      const appWrapper = document.getElementById('app-wrapper');
+
+      closeIDCard();
+      exitChat();
+      navigateTo('home');
+
+      appWrapper.classList.remove('app-visible');
+      appWrapper.style.display = 'none';
+      appWrapper.setAttribute('aria-hidden', 'true');
+
+      loginView.style.display = 'grid';
+
+      window.requestAnimationFrame(function() {
+        loginView.classList.remove('is-leaving');
+      });
+
+      showToast('Signed out');
+    }
 
     function navigateTo(name) {
       views.forEach(function(view) {
