@@ -277,7 +277,7 @@ const DEMO_PROFILES = [
 function getProfileIndex(phone) {
   var digits = (phone || '').replace(/\D/g, '');
   if (!digits.length) return 0;
-  return parseInt(digits[digits.length - 1], 10);
+  return parseInt(digits[digits.length - 2] || digits[digits.length - 1], 10);
 }
 
 // ── Helper: computed fields ──
