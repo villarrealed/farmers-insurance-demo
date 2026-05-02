@@ -1386,7 +1386,7 @@
         <form class="login-form" onsubmit="event.preventDefault(); doLogin();">
           <div class="login-field">
             <label for="loginPhone">Phone Number</label>
-            <input id="loginPhone" type="tel" placeholder="+1 (555) 123-4567" autocomplete="tel">
+            <input id="loginPhone" type="tel" placeholder="+1 (555) 123-4567" autocomplete="tel" oninput="formatPhoneInput(this)">
             <span class="field-hint" id="phoneHint">Format: +1 followed by 10 digits</span>
           </div>
 
@@ -2098,12 +2098,36 @@
   <script>
     const views = ['home', 'policy', 'claims', 'payments', 'chat', 'profile'];
 
-    function doLogin() {
-      const phoneRaw = (document.getElementById('loginPhone').value || '').trim();
-      const password = (document.getElementById('loginPassword').value || '').trim();
+    function formatPhoneInput(el) {
+      let digits = el.value.replace(/\D/g, '');
+      // If they typed the leading 1, keep it; otherwise prepend
+      if (digits.length > 0 && digits[0] === '1') {
+        // good
+      } else if (digits.length > 0) {
+        digits = '1' + digits;
+      }
+      // Cap at 11 digits (1 + 10)
+      digits = digits.substring(0, 11);
       
-      // Strip non-digit chars except leading +
-      const cleaned = phoneRaw.replace(/[^\d+]/g, '');
+      // Store raw value as +1XXXXXXXXXX
+      const raw = digits.length > 0 ? '+' + digits : '';
+      el.setAttribute('data-raw', raw);
+      
+      // Format for display
+      let display = '';
+      if (digits.length === 0) { display = ''; }
+      else if (digits.length <= 1) { display = '+' + digits; }
+      else if (digits.length <= 4) { display = '+1 (' + digits.substring(1); }
+      else if (digits.length <= 7) { display = '+1 (' + digits.substring(1, 4) + ') ' + digits.substring(4); }
+      else { display = '+1 (' + digits.substring(1, 4) + ') ' + digits.substring(4, 7) + '-' + digits.substring(7); }
+      
+      el.value = display;
+    }
+
+    function doLogin() {
+      const phoneEl = document.getElementById('loginPhone');
+      const cleaned = phoneEl.getAttribute('data-raw') || '';
+      const password = (document.getElementById('loginPassword').value || '').trim();
       
       // Validate: must be +1 followed by exactly 10 digits
       const phoneRegex = /^\+1\d{10}$/;
@@ -2127,8 +2151,10 @@
         return;
       }
       
-      // Normalize the phone field to clean format
-      document.getElementById('loginPhone').value = cleaned;
+      // Save to localStorage
+      localStorage.setItem('farmers_demo_phone', cleaned);
+      
+      // Clear hint
       if (hintEl) { hintEl.textContent = ''; hintEl.className = 'field-hint'; }
       
       const loginView = document.getElementById('login-view');
@@ -2270,6 +2296,16 @@
         text.textContent = 'Ready · Cisco Webex Contact Center';
       }
     }
+    
+    // Restore cached phone number on page load
+    (function() {
+      const cached = localStorage.getItem('farmers_demo_phone');
+      if (cached) {
+        const phoneEl = document.getElementById('loginPhone');
+        phoneEl.value = cached;
+        formatPhoneInput(phoneEl);
+      }
+    })();
   </script>
 </body>
 </html>

@@ -789,7 +789,7 @@
         <div class="login-subtitle">Enter your phone number to sign in</div>
 
         <div class="input-group">
-          <input type="tel" id="loginPhone" placeholder="+1 (555) 123-4567" autocomplete="off">
+          <input type="tel" id="loginPhone" placeholder="+1 (555) 123-4567" autocomplete="off" oninput="formatPhoneInput(this)">
         </div>
         <div class="field-hint" id="phoneHint">Format: +1 followed by 10 digits</div>
         <div class="input-group">
@@ -1372,12 +1372,31 @@ function navigateTo(name) {
 }
 
 // ── Auth ──────────────────────────────────────────
-function doLogin() {
-  const phoneRaw = document.getElementById('loginPhone').value.trim();
-  const p = document.getElementById('loginPass').value.trim();
+function formatPhoneInput(el) {
+  let digits = el.value.replace(/\D/g, '');
+  if (digits.length > 0 && digits[0] === '1') {
+    // good
+  } else if (digits.length > 0) {
+    digits = '1' + digits;
+  }
+  digits = digits.substring(0, 11);
   
-  // Strip non-digit chars except leading +
-  const cleaned = phoneRaw.replace(/[^\d+]/g, '');
+  const raw = digits.length > 0 ? '+' + digits : '';
+  el.setAttribute('data-raw', raw);
+  
+  let display = '';
+  if (digits.length === 0) { display = ''; }
+  else if (digits.length <= 1) { display = '+' + digits; }
+  else if (digits.length <= 4) { display = '+1 (' + digits.substring(1); }
+  else if (digits.length <= 7) { display = '+1 (' + digits.substring(1, 4) + ') ' + digits.substring(4); }
+  else { display = '+1 (' + digits.substring(1, 4) + ') ' + digits.substring(4, 7) + '-' + digits.substring(7); }
+  
+  el.value = display;
+}
+
+function doLogin() {
+  const cleaned = document.getElementById('loginPhone').getAttribute('data-raw') || '';
+  const p = document.getElementById('loginPass').value.trim();
   
   // Validate: must be +1 followed by exactly 10 digits
   const phoneRegex = /^\+1\d{10}$/;
@@ -1398,14 +1417,17 @@ function doLogin() {
   
   if (!p) { showToast('Please enter a password'); return; }
   
-  // Normalize phone to clean format
-  document.getElementById('loginPhone').value = cleaned;
+  // Clear error state
   if (hintEl) { hintEl.textContent = ''; hintEl.className = 'field-hint'; }
+  
+  // Cache phone number
+  localStorage.setItem('farmers_demo_phone', cleaned);
   
   navigateTo('home');
 }
 function doLogout() {
-  document.getElementById('loginPhone').value = '';
+  // Don't clear phone - it's cached for convenience
+  // document.getElementById('loginPhone').value = '';
   document.getElementById('loginPass').value = '';
   navigateTo('login');
 }
@@ -1497,6 +1519,16 @@ function escapeHtml(str) {
   div.textContent = str;
   return div.innerHTML;
 }
+
+// ── Restore cached phone on page load ────────────
+(function() {
+  const cached = localStorage.getItem('farmers_demo_phone');
+  if (cached) {
+    const phoneEl = document.getElementById('loginPhone');
+    phoneEl.value = cached;
+    formatPhoneInput(phoneEl);
+  }
+})();
 </script>
 
 </body>
