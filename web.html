@@ -2295,7 +2295,7 @@
 
     // ── JDS Integration ──────────────────────────────
     function getJdsBase() {
-      return localStorage.getItem('farmers_jds_base') || 'https://jds-us1.cjaas.cisco.com';
+      return localStorage.getItem('farmers_jds_base') || 'https://api.wxcc-us1.cisco.com';
     }
     const JDS_WORKSPACE = '6501bc14c618a0228c58566c';
     let currentJdsUser = null; // stores the looked-up person
@@ -2310,7 +2310,7 @@
       const status = document.getElementById('tokenStatus');
       const token = getJdsToken();
       input.value = token;
-      document.getElementById('jdsBaseInput').value = localStorage.getItem('farmers_jds_base') || 'https://jds-us1.cjaas.cisco.com';
+      document.getElementById('jdsBaseInput').value = localStorage.getItem('farmers_jds_base') || 'https://api.wxcc-us1.cisco.com';
       if (token) {
         status.textContent = '✓ Token configured';
         status.className = 'token-status ok';
@@ -2366,7 +2366,7 @@
       const base = getJdsBase();
       
       try {
-        const url = base + '/admin/v1/api/person/workspace-id/' + JDS_WORKSPACE + '/aliases/' + encodeURIComponent(aliasStr);
+        const url = base + '/admin/v1/api/person/workspace-id/' + JDS_WORKSPACE + '/aliases/' + aliasStr;
         console.log('JDS lookup URL:', url);
         const resp = await fetch(url, {
           method: 'GET',
@@ -2397,8 +2397,8 @@
       try {
         const url = getJdsBase() + '/admin/v1/api/person/workspace-id/' + JDS_WORKSPACE;
         const body = {
-          firstName: [firstName],
-          lastName: [lastName],
+          firstName: firstName,
+          lastName: lastName,
           phone: [phone],
           email: [email]
         };
