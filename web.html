@@ -1648,7 +1648,7 @@
               </div>
             </div>
             <div class="action-grid">
-              <button class="action-card" type="button" onclick="jdsPostEvent('action:file-claim', {uiData:{title:'File Claim',iconType:'claim',subTitle:'Started new claim filing',filterTags:['claim','action']}}); navigateTo('claims')">
+              <button class="action-card" type="button" onclick="navigateTo('claims')">
                 <div class="icon-box" style="background:#fff6d9;">📋</div>
                 <h3>File Claim</h3>
                 <p>Review open claims or start a new claim submission.</p>
@@ -1853,7 +1853,7 @@
             <p class="lead">Track open activity, review historical claims, and reach support if you need help moving a claim forward.</p>
           </div>
           <div>
-            <button class="claim-cta" type="button" onclick="showToast('New claim workflow started')">+ File a New Claim</button>
+            <button class="claim-cta" type="button" onclick="onFileClaim()">+ File a New Claim</button>
           </div>
         </div>
 
@@ -2218,8 +2218,8 @@
       </div>
 
       <div class="modal-actions">
-        <button class="btn" type="button" onclick="jdsPostEvent('action:save-wallet', {uiData:{title:'Save to Wallet',iconType:'wallet',subTitle:'Saved ID card to digital wallet',filterTags:['id-card','action']}}); showToast('ID Card saved to Wallet'); closeIDCard();">📲 Save to Wallet</button>
-        <button class="ghost-btn" type="button" onclick="jdsPostEvent('action:email-id-card', {uiData:{title:'Email ID Card',iconType:'email',subTitle:'Requested ID card via email',filterTags:['id-card','action']}}); showToast('ID Card sent to email'); closeIDCard();">✉️ Email ID Card</button>
+        <button class="btn" type="button" onclick="onSaveToWallet()">📲 Save to Wallet</button>
+        <button class="ghost-btn" type="button" onclick="onEmailIDCard()">✉️ Email ID Card</button>
       </div>
     </div>
   </div>
@@ -2460,6 +2460,23 @@
         headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
       }).catch(function(err) { console.warn('JDS event error:', err); });
+    }
+
+    function onFileClaim() {
+      jdsPostEvent('action:file-claim', {uiData:{title:'File Claim',iconType:'claim',subTitle:'Started new claim filing',filterTags:['claim','action']}});
+      showToast('New claim workflow started');
+    }
+
+    function onSaveToWallet() {
+      jdsPostEvent('action:save-wallet', {uiData:{title:'Save to Wallet',iconType:'wallet',subTitle:'Saved ID card to digital wallet',filterTags:['id-card','action']}});
+      showToast('ID Card saved to Wallet');
+      closeIDCard();
+    }
+
+    function onEmailIDCard() {
+      jdsPostEvent('action:email-id-card', {uiData:{title:'Email ID Card',iconType:'email',subTitle:'Requested ID card via email',filterTags:['id-card','action']}});
+      showToast('ID Card sent to email');
+      closeIDCard();
     }
 
     function personalizeUI(person) {

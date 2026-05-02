@@ -996,7 +996,7 @@
             <div class="qa-icon" style="background:#fff0f0;">💳</div>
             <span class="qa-label">Pay Bill</span>
           </button>
-          <button class="qa-btn" onclick="jdsPostEvent('action:file-claim', {uiData:{title:'File Claim',iconType:'claim',subTitle:'Started new claim filing',filterTags:['claim','action']}}); navigateTo('claims')">
+          <button class="qa-btn" onclick="navigateTo('claims')">
             <div class="qa-icon" style="background:#fff8e6;">📋</div>
             <span class="qa-label">File Claim</span>
           </button>
@@ -1161,7 +1161,7 @@
         <span class="inner-title">Claims</span>
       </div>
       <div class="scroll-content" style="padding-top:12px;padding-left:0;padding-right:0;">
-        <button class="new-claim-btn">
+        <button class="new-claim-btn" onclick="onFileClaim()">
           <span>+</span> File a New Claim
         </button>
 
@@ -1478,10 +1478,10 @@
           </div>
         </div>
         <div style="text-align:center;padding:0 20px;">
-          <button onclick="jdsPostEvent('action:save-wallet', {uiData:{title:'Save to Wallet',iconType:'wallet',subTitle:'Saved ID card to digital wallet',filterTags:['id-card','action']}}); showToast('ID Card saved to Photos');closeIDCard();" style="background:#cc2228;color:#fff;border:none;border-radius:12px;width:100%;height:48px;font-size:15px;font-weight:600;cursor:pointer;margin-bottom:10px;">
+          <button onclick="onSaveToWallet()" style="background:#cc2228;color:#fff;border:none;border-radius:12px;width:100%;height:48px;font-size:15px;font-weight:600;cursor:pointer;margin-bottom:10px;">
             📲 Save to Wallet
           </button>
-          <button onclick="jdsPostEvent('action:email-id-card', {uiData:{title:'Email ID Card',iconType:'email',subTitle:'Requested ID card via email',filterTags:['id-card','action']}}); showToast('ID Card sent to email');closeIDCard();" style="background:#f2f2f7;color:#1c1c1e;border:none;border-radius:12px;width:100%;height:44px;font-size:15px;cursor:pointer;">
+          <button onclick="onEmailIDCard()" style="background:#f2f2f7;color:#1c1c1e;border:none;border-radius:12px;width:100%;height:44px;font-size:15px;cursor:pointer;">
             ✉️ Email ID Card
           </button>
         </div>
@@ -1750,6 +1750,23 @@ function jdsPostEvent(action, detail) {
   }).catch(function(err) { console.warn('JDS event error:', err); });
 }
 
+function onFileClaim() {
+  jdsPostEvent('action:file-claim', {uiData:{title:'File Claim',iconType:'claim',subTitle:'Started new claim filing',filterTags:['claim','action']}});
+  showToast('New claim workflow started');
+}
+
+function onSaveToWallet() {
+  jdsPostEvent('action:save-wallet', {uiData:{title:'Save to Wallet',iconType:'wallet',subTitle:'Saved ID card to digital wallet',filterTags:['id-card','action']}});
+  showToast('ID Card saved to Photos');
+  closeIDCard();
+}
+
+function onEmailIDCard() {
+  jdsPostEvent('action:email-id-card', {uiData:{title:'Email ID Card',iconType:'email',subTitle:'Requested ID card via email',filterTags:['id-card','action']}});
+  showToast('ID Card sent to email');
+  closeIDCard();
+}
+
 function personalizeUI(person) {
   if (!person) return;
   
@@ -1884,7 +1901,7 @@ function applyDemoProfile(p) {
   // ── CLAIMS VIEW ──
   var claimsContainer = document.querySelector('#view-claims .scroll-content');
   if (claimsContainer) {
-    var claimsHTML = '<button class="new-claim-btn"><span>+</span> File a New Claim</button>' +
+    var claimsHTML = '<button class="new-claim-btn" onclick="onFileClaim()"><span>+</span> File a New Claim</button>' +
       '<div style="padding:0 16px;margin-top:16px;"><div class="section-title" style="margin-top:0;">Recent Claims</div></div>';
     
     if (p.claims.length === 0) {
