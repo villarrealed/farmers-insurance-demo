@@ -2347,18 +2347,42 @@
       const token = getJdsToken();
       if (!token) return null;
       
+      // Try multiple alias formats — JDS does exact match
+      // phone comes in as +16027991349
+      const digits = phone.replace(/\D/g, ''); // 16027991349
+      const tenDigits = digits.length === 11 && digits[0] === '1' ? digits.substring(1) : digits; // 6027991349
+      
+      const formats = [
+        phone,                    // +16027991349
+        digits,                   // 16027991349
+        tenDigits,                // 6027991349
+        'tel:' + phone,           // tel:+16027991349
+        'phone:' + phone,         // phone:+16027991349
+        'phone:' + digits         // phone:16027991349
+      ];
+      
+      // Try comma-separated lookup (JDS supports multiple aliases in one call)
+      const aliasStr = formats.join(',');
+      const base = getJdsBase();
+      
       try {
-        const url = getJdsBase() + '/admin/v1/api/person/workspace-id/' + JDS_WORKSPACE + '/aliases/' + encodeURIComponent(phone);
+        const url = base + '/admin/v1/api/person/workspace-id/' + JDS_WORKSPACE + '/aliases/' + encodeURIComponent(aliasStr);
+        console.log('JDS lookup URL:', url);
         const resp = await fetch(url, {
           method: 'GET',
           headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' }
         });
         if (resp.ok) {
           const data = await resp.json();
-          return data; // person object
+          console.log('JDS person found:', data);
+          return data;
         }
-        if (resp.status === 404) return null;
-        console.warn('JDS lookup failed:', resp.status, await resp.text());
+        if (resp.status === 404) {
+          console.log('JDS person not found with any format:', formats);
+          return null;
+        }
+        const errText = await resp.text();
+        console.warn('JDS lookup failed:', resp.status, errText);
         return null;
       } catch (err) {
         console.warn('JDS lookup error:', err);
