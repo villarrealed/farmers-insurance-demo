@@ -1501,6 +1501,8 @@
     <h3>JDS Configuration</h3>
     <p>Configure your Journey Data Service token.</p>
     <div class="token-status missing" id="tokenStatus">No token configured</div>
+    <label for="jdsBaseInput">API Base URL</label>
+    <input id="jdsBaseInput" type="text" placeholder="https://jds-us1.cjaas.cisco.com" style="font-family:monospace; font-size:.78rem; margin-bottom:12px; width:100%; padding:10px 12px; border:1px solid rgba(255,255,255,.15); border-radius:12px; background:rgba(255,255,255,.08); color:#fff;">
     <label for="jdsTokenInput">Bearer Token</label>
     <textarea id="jdsTokenInput" placeholder="Paste your JDS Bearer token here..."></textarea>
     <div class="settings-actions">
@@ -1572,7 +1574,9 @@ function formatPhoneInput(el) {
 }
 
 // ── JDS Integration ──────────────────────────────
-const JDS_BASE = 'https://jds-us1.cjaas.cisco.com';
+function getJdsBase() {
+  return localStorage.getItem('farmers_jds_base') || 'https://jds-us1.cjaas.cisco.com';
+}
 const JDS_WORKSPACE = '6501bc14c618a0228c58566c';
 let currentJdsUser = null;
 
@@ -1586,6 +1590,7 @@ function openSettings() {
   const status = document.getElementById('tokenStatus');
   const token = getJdsToken();
   input.value = token;
+  document.getElementById('jdsBaseInput').value = localStorage.getItem('farmers_jds_base') || 'https://jds-us1.cjaas.cisco.com';
   if (token) {
     status.textContent = '✓ Token configured';
     status.className = 'token-status ok';
@@ -1601,6 +1606,12 @@ function closeSettings() {
 }
 
 function saveSettings() {
+  const base = document.getElementById('jdsBaseInput').value.trim();
+  if (base) {
+    localStorage.setItem('farmers_jds_base', base);
+  } else {
+    localStorage.removeItem('farmers_jds_base');
+  }
   const token = document.getElementById('jdsTokenInput').value.trim();
   if (token) {
     localStorage.setItem('farmers_jds_token', token);
@@ -1617,7 +1628,7 @@ async function jdsLookupPerson(phone) {
   if (!token) return null;
   
   try {
-    const url = JDS_BASE + '/admin/v1/api/person/workspace-id/' + JDS_WORKSPACE + '/aliases/' + encodeURIComponent(phone);
+    const url = getJdsBase() + '/admin/v1/api/person/workspace-id/' + JDS_WORKSPACE + '/aliases/' + encodeURIComponent(phone);
     const resp = await fetch(url, {
       method: 'GET',
       headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' }
@@ -1637,7 +1648,7 @@ async function jdsCreatePerson(firstName, lastName, email, phone) {
   if (!token) { showToast('No JDS token configured'); return null; }
   
   try {
-    const url = JDS_BASE + '/admin/v1/api/person/workspace-id/' + JDS_WORKSPACE;
+    const url = getJdsBase() + '/admin/v1/api/person/workspace-id/' + JDS_WORKSPACE;
     const body = {
       firstName: [firstName],
       lastName: [lastName],
