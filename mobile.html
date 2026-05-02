@@ -1543,12 +1543,22 @@ setInterval(updateClock, 10000);
 
 // ── Navigation ────────────────────────────────────
 const views = ['login','home','policy','claims','payment','chat','profile'];
-function navigateTo(name) {
+function navigateTo(name, skipHistory) {
   views.forEach(v => {
     document.getElementById('view-' + v).classList.remove('active');
   });
   document.getElementById('view-' + name).classList.add('active');
+
+  if (!skipHistory) {
+    history.pushState({view: name}, '');
+  }
 }
+
+window.addEventListener('popstate', function(e) {
+  if (e.state && e.state.view) {
+    navigateTo(e.state.view, true);
+  }
+});
 
 // ── Auth ──────────────────────────────────────────
 function formatPhoneInput(el) {
@@ -1775,7 +1785,8 @@ async function submitRegistration() {
   loadingEl.classList.remove('active');
   document.querySelector('.btn-login').style.display = '';
   document.querySelectorAll('#view-login .input-group').forEach(function(el) { el.style.display = ''; });
-  navigateTo('home');
+  navigateTo('home', true);
+  history.replaceState({view: 'home'}, '');
 }
 
 async function doLogin() {
@@ -1806,7 +1817,8 @@ async function doLogin() {
   const token = getJdsToken();
   if (!token) {
     showToast('No JDS token — using default profile');
-    navigateTo('home');
+    navigateTo('home', true);
+    history.replaceState({view: 'home'}, '');
     return;
   }
   
@@ -1826,7 +1838,8 @@ async function doLogin() {
     loadingEl.classList.remove('active');
     document.querySelector('.btn-login').style.display = '';
     document.querySelectorAll('#view-login .input-group').forEach(function(el) { el.style.display = ''; });
-    navigateTo('home');
+    navigateTo('home', true);
+    history.replaceState({view: 'home'}, '');
   } else {
     loadingEl.classList.remove('active');
     showRegistrationModal(cleaned);
@@ -1836,7 +1849,7 @@ function doLogout() {
   // Don't clear phone - it's cached for convenience
   // document.getElementById('loginPhone').value = '';
   document.getElementById('loginPass').value = '';
-  navigateTo('login');
+  navigateTo('login', true);
 }
 
 // ── Toast ─────────────────────────────────────────
@@ -1903,7 +1916,7 @@ function exitChat() {
   // Reset iframe so widget restarts fresh next time
   var iframe = document.getElementById('chatWidgetFrame');
   if (iframe) iframe.src = 'about:blank';
-  navigateTo('home');
+  navigateTo('home', true);
 }
 
 function updateChatStatus(state) {

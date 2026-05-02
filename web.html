@@ -2509,6 +2509,9 @@
     }
 
     function proceedToApp() {
+      // Replace history entry so back button goes to index.html, not login screen
+      history.replaceState({view: 'home'}, '');
+
       const loadingEl = document.getElementById('loginLoading');
       loadingEl.classList.remove('active');
       document.querySelector('.login-form').style.display = '';
@@ -2595,7 +2598,7 @@
 
       closeIDCard();
       exitChat();
-      navigateTo('home');
+      navigateTo('home', true);
 
       appWrapper.classList.remove('app-visible');
       appWrapper.style.display = 'none';
@@ -2610,7 +2613,7 @@
       showToast('Signed out');
     }
 
-    function navigateTo(name) {
+    function navigateTo(name, skipHistory) {
       views.forEach(function(view) {
         document.getElementById('view-' + view).classList.toggle('active', view === name);
       });
@@ -2620,7 +2623,17 @@
       });
 
       window.scrollTo({ top: 0, behavior: 'smooth' });
+
+      if (!skipHistory) {
+        history.pushState({view: name}, '');
+      }
     }
+
+    window.addEventListener('popstate', function(e) {
+      if (e.state && e.state.view) {
+        navigateTo(e.state.view, true);
+      }
+    });
 
     let toastTimer;
     function showToast(message) {
