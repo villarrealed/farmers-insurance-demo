@@ -2264,6 +2264,7 @@
 
   <div class="toast" id="toast" aria-live="polite"></div>
 
+  <script src="assets/js/profiles.js"></script>
   <script>
     const views = ['home', 'policy', 'claims', 'payments', 'chat', 'profile'];
 
@@ -2455,6 +2456,218 @@
       if (prechatEmail && email) prechatEmail.value = email;
     }
 
+    function applyDemoProfile(p) {
+      if (!p) return;
+      
+      // ── Topbar ──
+      const metaChip = document.querySelector('.meta-chip');
+      if (metaChip) metaChip.textContent = p.policy.number;
+      
+      const metaAvatar = document.querySelector('.meta-avatar');
+      if (metaAvatar) metaAvatar.textContent = p._initials;
+      
+      // ── Home View ──
+      const heroH1 = document.querySelector('#view-home .hero-panel h1');
+      if (heroH1) {
+        heroH1.innerHTML = 'Hi, ' + p._firstName + '<span class="hide-mobile"> ' + p._lastName + '</span> 👋';
+      }
+      
+      // Hero stat grid (3 stats)
+      const heroStats = document.querySelectorAll('#view-home .hero-stat-grid .hero-stat');
+      if (heroStats.length >= 3) {
+        heroStats[0].innerHTML = '<strong>Active Auto Policy</strong><span>' + p._vehicleShort + ' · ' + p.location + '</span>';
+        heroStats[1].innerHTML = '<strong>' + p.payment.amount + ' Due</strong><span>Next payment due ' + p.payment.nextDateShort + '</span>';
+        heroStats[2].innerHTML = '<strong>24/7 Support</strong><span>Claims & live agent assistance available</span>';
+      }
+      
+      // Summary vehicle
+      const summaryVehicle = document.querySelector('#view-home .summary-vehicle');
+      if (summaryVehicle) {
+        summaryVehicle.innerHTML = '<div class="vehicle-icon">🚗</div><div><strong>' + p._vehicleFull + '</strong><div class="list-note">VIN: ' + p.vehicle.vin + '</div><div class="list-note">Policy expires ' + p.policy.expirationBrief + '</div></div>';
+      }
+      
+      // Summary list (3 rows)
+      const summaryRows = document.querySelectorAll('#view-home .summary-list .summary-row');
+      if (summaryRows.length >= 3) {
+        summaryRows[0].innerHTML = '<div><strong>6-month premium</strong><div class="list-note">Current term total</div></div><strong>' + p.policy.premium6Mo + '</strong>';
+        summaryRows[1].innerHTML = '<div><strong>AutoPay</strong><div class="list-note">' + p.payment.cardShort + '</div></div><span class="badge info">Enrolled</span>';
+        summaryRows[2].innerHTML = '<div><strong>Claims support line</strong><div class="list-note">Available 24/7</div></div><strong>1-800-435-7764</strong>';
+      }
+      
+      // Coverage detail rows on home (6 rows)
+      const homeCoverageRows = document.querySelectorAll('#view-home .detail-list .detail-row');
+      if (homeCoverageRows.length >= 6) {
+        homeCoverageRows[0].innerHTML = '<span>Bodily Injury Liability</span><strong>' + p.coverage.bodilyInjury + '</strong>';
+        homeCoverageRows[1].innerHTML = '<span>Property Damage</span><strong>' + p.coverage.propertyDamage + '</strong>';
+        homeCoverageRows[2].innerHTML = '<span>Comprehensive</span><strong>' + p.coverage.comprehensiveFull + '</strong>';
+        homeCoverageRows[3].innerHTML = '<span>Collision</span><strong>' + p.coverage.collisionFull + '</strong>';
+        homeCoverageRows[4].innerHTML = '<span>Uninsured Motorist</span><strong>' + p.coverage.umUim + '</strong>';
+        homeCoverageRows[5].innerHTML = '<span>Roadside Assistance</span><strong>' + p.coverage.roadsideBrief + '</strong>';
+      }
+      
+      // Payment schedule on home (3 rows)
+      const homeScheduleRows = document.querySelectorAll('#view-home .schedule-list .schedule-row');
+      if (homeScheduleRows.length >= 3) {
+        homeScheduleRows[0].innerHTML = '<div><strong>Next Payment Due</strong><div class="list-note">Due ' + p.payment.nextDateShort + '</div></div><div style="text-align:right;"><strong>' + p.payment.amount + '</strong><div><span class="badge warn">Due in ' + p.payment.dueInDays + ' days</span></div></div>';
+        homeScheduleRows[1].innerHTML = '<div><strong>Last Payment</strong><div class="list-note">' + p.payment.lastDateShort + '</div></div><div style="text-align:right;"><strong>' + p.payment.amount + '</strong><div><span class="badge success">Paid</span></div></div>';
+        homeScheduleRows[2].innerHTML = '<div><strong>AutoPay</strong><div class="list-note">' + p.payment.cardShort + '</div></div><div style="text-align:right;"><strong>Enabled</strong><div><span class="badge info">Enrolled</span></div></div>';
+      }
+      
+      // ── Policy View ──
+      const policyVehicle = document.querySelector('#view-policy .policy-vehicle');
+      if (policyVehicle) {
+        policyVehicle.innerHTML = '<div class="vehicle-icon">🚗</div><div><h2 style="margin-bottom:6px;">' + p._vehicleShort + '</h2><div class="muted" style="color:rgba(255,255,255,.8);">' + p._vehicleDesc + '</div></div>';
+      }
+      
+      // Policy stats (3 stats)
+      const policyStats = document.querySelectorAll('#view-policy .policy-stat');
+      if (policyStats.length >= 3) {
+        policyStats[0].innerHTML = '<strong>' + p.policy.status + '</strong><span>Status</span>';
+        policyStats[1].innerHTML = '<strong>' + p.policy.expirationBrief + '</strong><span>Expires</span>';
+        policyStats[2].innerHTML = '<strong>' + p.policy.premium6MoShort + '</strong><span>6-Mo. Premium</span>';
+      }
+      
+      // Policy detail rows (first detail-list in policy view - 8 rows)
+      const policyDetailLists = document.querySelectorAll('#view-policy .detail-list');
+      if (policyDetailLists.length >= 1) {
+        const accountRows = policyDetailLists[0].querySelectorAll('.detail-row');
+        if (accountRows.length >= 8) {
+          accountRows[0].innerHTML = '<span>Policy Number</span><strong>#' + p.policy.number + '</strong>';
+          accountRows[1].innerHTML = '<span>Policy Holder</span><strong>' + p._fullName + '</strong>';
+          accountRows[2].innerHTML = '<span>Address</span><strong>' + p.location + '</strong>';
+          accountRows[3].innerHTML = '<span>Effective Date</span><strong>' + p.policy.effectiveDate + '</strong>';
+          accountRows[4].innerHTML = '<span>Expiration Date</span><strong>' + p.policy.expirationDate + '</strong>';
+          accountRows[5].innerHTML = '<span>VIN</span><strong>' + p.vehicle.vin + '</strong>';
+          accountRows[6].innerHTML = '<span>Year / Make</span><strong>' + p._vehicleYearMake + '</strong>';
+          accountRows[7].innerHTML = '<span>Model / Trim</span><strong>' + p._vehicleModelTrim + '</strong>';
+        }
+      }
+      
+      // Coverage detail rows (second detail-list in policy view - 9 rows)
+      if (policyDetailLists.length >= 2) {
+        const coverageRows = policyDetailLists[1].querySelectorAll('.detail-row');
+        if (coverageRows.length >= 9) {
+          coverageRows[0].innerHTML = '<span>Bodily Injury</span><strong>' + p.coverage.bodilyInjury + '</strong>';
+          coverageRows[1].innerHTML = '<span>Property Damage</span><strong>' + p.coverage.propertyDamage + '</strong>';
+          coverageRows[2].innerHTML = '<span>Medical Payments</span><strong>' + p.coverage.medicalPay + '</strong>';
+          coverageRows[3].innerHTML = '<span>Comprehensive</span><strong>' + p.coverage.comprehensive + '</strong>';
+          coverageRows[4].innerHTML = '<span>Collision</span><strong>' + p.coverage.collision + '</strong>';
+          coverageRows[5].innerHTML = '<span>UM / UIM</span><strong>' + p.coverage.umUim + '</strong>';
+          coverageRows[6].innerHTML = '<span>Rental Reimbursement</span><strong>' + p.coverage.rental + '</strong>';
+          coverageRows[7].innerHTML = '<span>Roadside Assistance</span><strong>' + p.coverage.roadside + '</strong>';
+          coverageRows[8].innerHTML = '<span>Rideshare Coverage</span><strong>' + p.coverage.rideshare + '</strong>';
+        }
+      }
+      
+      // Vehicle detail rows (third detail-list in policy view - 4 rows)
+      if (policyDetailLists.length >= 3) {
+        const vehicleRows = policyDetailLists[2].querySelectorAll('.detail-row');
+        if (vehicleRows.length >= 4) {
+          vehicleRows[0].innerHTML = '<span>Vehicle</span><strong>' + p._vehicleFull + '</strong>';
+          vehicleRows[1].innerHTML = '<span>Garaging Location</span><strong>' + p.location + '</strong>';
+          vehicleRows[2].innerHTML = '<span>Use</span><strong>Personal</strong>';
+          vehicleRows[3].innerHTML = '<span>Proof of Insurance</span><button class="link-btn" type="button" onclick="showIDCard()">Open ID Card</button>';
+        }
+      }
+      
+      // ── Claims View ──
+      const claimStack = document.querySelector('#view-claims .claim-stack');
+      if (claimStack) {
+        if (p.claims.length === 0) {
+          claimStack.innerHTML = '<div style="padding:48px 24px; text-align:center; color:var(--muted);"><div style="font-size:3rem; margin-bottom:12px;">✓</div><h3 style="margin-bottom:8px;">No claims on file</h3><p class="lead">You have no active or historical claims.</p></div>';
+        } else {
+          let claimsHTML = '';
+          p.claims.forEach(function(claim) {
+            const dotColor = claim.status === 'Closed' ? '#47c970' : '#ff9500';
+            const badgeClass = claim.status === 'Closed' ? 'success' : 'warn';
+            claimsHTML += '<article class="claim-card"><div class="claim-dot" style="background:' + dotColor + ';"></div><div><h3>' + claim.title + '</h3><div class="list-note">Claim #' + claim.number + ' · Filed ' + claim.date + '</div><div class="list-note">' + claim.label + ': ' + claim.amount + '</div></div><span class="badge ' + badgeClass + '">' + claim.status + '</span></article>';
+          });
+          claimStack.innerHTML = claimsHTML;
+        }
+      }
+      
+      // ── Payments View ──
+      const paymentBanner = document.querySelector('#view-payments .payment-banner');
+      if (paymentBanner) {
+        const amountEl = paymentBanner.querySelector('.amount');
+        const mutedEl = paymentBanner.querySelector('.muted');
+        if (amountEl) amountEl.textContent = p.payment.amount;
+        if (mutedEl) mutedEl.textContent = 'Due ' + p.payment.nextDateShort + ' · AutoPay enrolled';
+      }
+      
+      const autopayCard = document.querySelector('#view-payments .autopay-card .list-note');
+      if (autopayCard) autopayCard.textContent = p.payment.card;
+      
+      // Payment schedule list
+      const paymentScheduleList = document.querySelector('#view-payments .schedule-list');
+      if (paymentScheduleList) {
+        let scheduleHTML = '';
+        p.payment.history.forEach(function(item) {
+          const color = item.status === 'upcoming' ? '#b57600' : '#177245';
+          const label = item.status === 'upcoming' ? '(upcoming)' : '✓ Paid';
+          scheduleHTML += '<div class="schedule-row"><span>' + item.date + '</span><strong style="color:' + color + ';">' + item.amount + ' ' + label + '</strong></div>';
+        });
+        paymentScheduleList.innerHTML = scheduleHTML;
+      }
+      
+      // Premium breakdown
+      const breakdownList = document.querySelector('#view-payments .breakdown-list');
+      if (breakdownList) {
+        breakdownList.innerHTML = '<div class="breakdown-row"><span>Bodily Injury / PD</span><strong>' + p.payment.breakdown.bi + '</strong></div><div class="breakdown-row"><span>Comprehensive</span><strong>' + p.payment.breakdown.comp + '</strong></div><div class="breakdown-row"><span>Collision</span><strong>' + p.payment.breakdown.coll + '</strong></div><div class="breakdown-row"><span>UM / UIM</span><strong>' + p.payment.breakdown.um + '</strong></div><div class="breakdown-row"><span>Roadside / Rental</span><strong>' + p.payment.breakdown.roadside + '</strong></div><div class="breakdown-row"><span>State Fees &amp; Taxes</span><strong>' + p.payment.breakdown.fees + '</strong></div><div class="breakdown-row"><span><strong>Total / Month</strong></span><strong>' + p.payment.amount + '</strong></div>';
+      }
+      
+      // ── Chat Pre-fill ──
+      const prechatName = document.getElementById('prechatName');
+      const prechatEmail = document.getElementById('prechatEmail');
+      if (prechatName) prechatName.value = p._fullName;
+      if (prechatEmail) prechatEmail.value = p._email;
+      
+      // ── Profile View ──
+      const profileCard = document.querySelector('#view-profile .profile-card');
+      if (profileCard) {
+        const avatar = profileCard.querySelector('.avatar');
+        const h2 = profileCard.querySelector('h2');
+        const lead = profileCard.querySelector('.lead');
+        const muted = profileCard.querySelector('.muted');
+        if (avatar) avatar.textContent = p._initials;
+        if (h2) h2.textContent = p._fullName;
+        if (lead) lead.textContent = p._email;
+        if (muted) muted.textContent = p.location + ' · Member since ' + p.memberSince + ' · Policy #' + p.policy.number;
+      }
+      
+      const profileMetaRows = document.querySelectorAll('#view-profile .profile-meta-row');
+      if (profileMetaRows.length >= 3) {
+        profileMetaRows[0].innerHTML = '<span>Primary policy</span><strong>Auto</strong>';
+        profileMetaRows[1].innerHTML = '<span>My Agent</span><strong>' + p.agent.name + '</strong>';
+        profileMetaRows[2].innerHTML = '<span>Office</span><strong>' + p.agent.phone + '</strong>';
+      }
+      
+      // Agent button in settings
+      const agentButton = document.querySelector('#view-profile .settings-row[onclick*="Mike Torres"]');
+      if (agentButton) {
+        agentButton.setAttribute('onclick', 'showToast(\'Agent: ' + p.agent.name + ' · ' + p.agent.phone + '\')');
+        const agentCopy = agentButton.querySelector('strong');
+        if (agentCopy) agentCopy.textContent = 'My Agent — ' + p.agent.name;
+      }
+      
+      // ── ID Card ──
+      const idCard = document.querySelector('.id-card');
+      if (idCard) {
+        const idHead = idCard.querySelector('.id-head');
+        if (idHead) {
+          idHead.innerHTML = '<div><div style="font: italic 900 1.6rem Georgia, serif;">Farmers</div><div class="id-label">Auto Insurance</div></div><div class="id-label">Policy #' + p.policy.number + '</div>';
+        }
+        
+        const idGrid = idCard.querySelector('.id-grid');
+        if (idGrid) {
+          idGrid.innerHTML = '<div><div class="id-label">Insured</div><div class="id-value">' + p._fullName + '</div></div><div><div class="id-label">Policy #</div><div class="id-value">' + p.policy.number + '</div></div><div><div class="id-label">Vehicle</div><div class="id-value">' + p._vehicleShort + '</div></div><div><div class="id-label">VIN</div><div class="id-value">' + p.vehicle.vin + '</div></div><div><div class="id-label">Effective</div><div class="id-value">' + p.policy.effectiveFmt + '</div></div><div><div class="id-label">Expires</div><div class="id-value">' + p.policy.expirationFmt + '</div></div>';
+        }
+      }
+      
+      // Store for other uses
+      currentJdsUser = p;
+    }
+
     // Registration flow state
     let pendingPhone = '';
     let pendingPassword = '';
@@ -2495,15 +2708,22 @@
       
       const person = await jdsCreatePerson(firstName, lastName, email, pendingPhone);
       
+      // Compute profile from phone number
+      const profileIdx = getProfileIndex(pendingPhone);
+      const baseProfile = DEMO_PROFILES[profileIdx];
+      
       if (person) {
         // Build a person-like object for personalization
         const personObj = person.id ? person : { firstName: [firstName], lastName: [lastName], email: [email], phone: [pendingPhone] };
-        personalizeUI(personObj);
+        const ep = enrichProfile(baseProfile, personObj);
+        applyDemoProfile(ep);
         showToast('Welcome, ' + firstName + '! Profile created.');
         proceedToApp();
       } else {
         // Even if JDS create failed, let them in with entered data
-        personalizeUI({ firstName: [firstName], lastName: [lastName], email: [email], phone: [pendingPhone] });
+        const personObj = { firstName: [firstName], lastName: [lastName], email: [email], phone: [pendingPhone] };
+        const ep = enrichProfile(baseProfile, personObj);
+        applyDemoProfile(ep);
         proceedToApp();
       }
     }
@@ -2561,10 +2781,16 @@
       localStorage.setItem('farmers_demo_phone', cleaned);
       if (hintEl) { hintEl.textContent = ''; hintEl.className = 'field-hint'; }
       
+      // Compute profile from phone number
+      const profileIdx = getProfileIndex(cleaned);
+      const baseProfile = DEMO_PROFILES[profileIdx];
+      
       // Check if JDS token is configured
       const token = getJdsToken();
       if (!token) {
-        // No token — skip JDS, go straight to app with default data
+        // No token — skip JDS, go straight to app with profile data
+        const ep = enrichProfile(baseProfile, null);
+        applyDemoProfile(ep);
         showToast('No JDS token — using default profile');
         proceedToApp();
         return;
@@ -2581,7 +2807,8 @@
       
       if (person && (person.firstName || person.lastName || person.id)) {
         // Found! Personalize and proceed
-        personalizeUI(person);
+        const ep = enrichProfile(baseProfile, person);
+        applyDemoProfile(ep);
         const fn = (Array.isArray(person.firstName) ? person.firstName[0] : person.firstName) || '';
         showToast('Welcome back, ' + fn + '!');
         proceedToApp();

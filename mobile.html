@@ -884,6 +884,7 @@
   @keyframes spin { to { transform: rotate(360deg); } }
   .login-loading-indicator span { color: rgba(255,255,255,.6); font-size: .82rem; }
 </style>
+<script src="assets/js/profiles.js"></script>
 </head>
 <body>
 
@@ -1589,6 +1590,7 @@ function getJdsBase() {
 }
 const JDS_WORKSPACE = '6501bc14c618a0228c58566c';
 let currentJdsUser = null;
+let currentProfile = null;
 
 function getJdsToken() {
   return localStorage.getItem('farmers_jds_token') || '';
@@ -1738,6 +1740,226 @@ function personalizeUI(person) {
   if (prechatEmail && email) prechatEmail.value = email;
 }
 
+function applyDemoProfile(p) {
+  if (!p) return;
+  currentProfile = p;
+  
+  // ── HOME VIEW ──
+  // Greeting
+  var nameEl = document.querySelector('#view-home .name');
+  if (nameEl) nameEl.textContent = 'Hi, ' + p._firstName + ' 👋';
+  
+  // Avatar
+  var avatarBtn = document.querySelector('.avatar-btn');
+  if (avatarBtn) avatarBtn.textContent = p._initials;
+  
+  // Policy card
+  var policyNum = document.querySelector('#view-home .policy-number');
+  if (policyNum) policyNum.textContent = p.policy.number;
+  
+  var vehicleMake = document.querySelector('#view-home .policy-card .make');
+  if (vehicleMake) vehicleMake.textContent = p._vehicleShort;
+  
+  var vehicleYearModel = document.querySelector('#view-home .policy-card .year-model');
+  if (vehicleYearModel) vehicleYearModel.textContent = p._vehicleDesc + ' · VIN: ' + p.vehicle.vin;
+  
+  var policyExpiry = document.querySelector('#view-home .policy-card-footer .expiry + div');
+  if (policyExpiry) policyExpiry.textContent = p.policy.expirationDate;
+  
+  var policyAmount = document.querySelector('#view-home .policy-card-footer .amount');
+  if (policyAmount) policyAmount.textContent = p.policy.premium6Mo;
+  
+  // Payment card
+  var nextPayLabel = document.querySelector('#view-home .payment-row:nth-child(1) .pr-label');
+  if (nextPayLabel) nextPayLabel.textContent = 'Next Payment Due';
+  
+  var nextPayDate = document.querySelector('#view-home .payment-row:nth-child(1) .pr-date');
+  if (nextPayDate) nextPayDate.textContent = 'Due ' + p.payment.nextDateShort;
+  
+  var nextPayStatus = document.querySelector('#view-home .payment-row:nth-child(1) .payment-status');
+  if (nextPayStatus) nextPayStatus.textContent = 'DUE IN ' + p.payment.dueInDays + ' DAYS';
+  
+  var nextPayAmount = document.querySelector('#view-home .payment-row:nth-child(1) .pr-amount');
+  if (nextPayAmount) nextPayAmount.textContent = p.payment.amount;
+  
+  var lastPayDate = document.querySelector('#view-home .payment-row:nth-child(2) .pr-date');
+  if (lastPayDate) lastPayDate.textContent = p.payment.lastDateShort;
+  
+  var lastPayAmount = document.querySelector('#view-home .payment-row:nth-child(2) .pr-amount');
+  if (lastPayAmount) lastPayAmount.textContent = p.payment.amount;
+  
+  var autopayCard = document.querySelector('#view-home .payment-row:nth-child(3) .pr-date');
+  if (autopayCard) autopayCard.textContent = p.payment.cardShort;
+  
+  // Coverage summary
+  var covList = document.querySelector('#view-home .coverage-list');
+  if (covList) {
+    covList.innerHTML = 
+      '<li><span class="cov-name">Bodily Injury Liability</span><span class="cov-val">' + p.coverage.bodilyInjury + '</span></li>' +
+      '<li><span class="cov-name">Property Damage</span><span class="cov-val">' + p.coverage.propertyDamage + '</span></li>' +
+      '<li><span class="cov-name">Comprehensive</span><span class="cov-val">' + p.coverage.comprehensiveFull + '</span></li>' +
+      '<li><span class="cov-name">Collision</span><span class="cov-val">' + p.coverage.collisionFull + '</span></li>' +
+      '<li><span class="cov-name">Uninsured Motorist</span><span class="cov-val">' + p.coverage.umUim + '</span></li>' +
+      '<li><span class="cov-name">Roadside Assistance</span><span class="cov-val">' + p.coverage.roadsideBrief + '</span></li>';
+  }
+  
+  // ── POLICY VIEW ──
+  var vdTitle = document.querySelector('#view-policy .vd-title');
+  if (vdTitle) vdTitle.textContent = p._vehicleShort;
+  
+  var vdSub = document.querySelector('#view-policy .vd-sub');
+  if (vdSub) vdSub.textContent = p._vehicleDesc;
+  
+  var vdExpires = document.querySelector('#view-policy .vd-stat:nth-child(2) .vd-stat-val');
+  if (vdExpires) vdExpires.textContent = p.policy.expirationBrief;
+  
+  var vdPremium = document.querySelector('#view-policy .vd-stat:nth-child(3) .vd-stat-val');
+  if (vdPremium) vdPremium.textContent = p.policy.premium6MoShort;
+  
+  // Policy details list
+  var policyDetailsList = document.querySelector('#view-policy .info-card:nth-of-type(1) .coverage-list');
+  if (policyDetailsList) {
+    policyDetailsList.innerHTML =
+      '<li><span class="cov-name">Policy Number</span><span class="cov-val">' + p.policy.number + '</span></li>' +
+      '<li><span class="cov-name">Policy Holder</span><span class="cov-val">' + p._fullName + '</span></li>' +
+      '<li><span class="cov-name">Address</span><span class="cov-val">' + p.location + '</span></li>' +
+      '<li><span class="cov-name">Effective Date</span><span class="cov-val">' + p.policy.effectiveDate + '</span></li>' +
+      '<li><span class="cov-name">Expiration Date</span><span class="cov-val">' + p.policy.expirationDate + '</span></li>' +
+      '<li><span class="cov-name">VIN</span><span class="cov-val" style="font-size:12px;">' + p.vehicle.vin + '</span></li>' +
+      '<li><span class="cov-name">Year / Make</span><span class="cov-val">' + p._vehicleYearMake + '</span></li>' +
+      '<li><span class="cov-name">Model / Trim</span><span class="cov-val">' + p._vehicleModelTrim + '</span></li>';
+  }
+  
+  // Coverage details list
+  var coverageDetailsList = document.querySelector('#view-policy .info-card:nth-of-type(2) .coverage-list');
+  if (coverageDetailsList) {
+    coverageDetailsList.innerHTML =
+      '<li><span class="cov-name">Bodily Injury</span><span class="cov-val">' + p.coverage.bodilyInjury + '</span></li>' +
+      '<li><span class="cov-name">Property Damage</span><span class="cov-val">' + p.coverage.propertyDamage + '</span></li>' +
+      '<li><span class="cov-name">Medical Payments</span><span class="cov-val">' + p.coverage.medicalPay + '</span></li>' +
+      '<li><span class="cov-name">Comprehensive</span><span class="cov-val">' + p.coverage.comprehensive + '</span></li>' +
+      '<li><span class="cov-name">Collision</span><span class="cov-val">' + p.coverage.collision + '</span></li>' +
+      '<li><span class="cov-name">UM / UIM</span><span class="cov-val">' + p.coverage.umUim + '</span></li>' +
+      '<li><span class="cov-name">Rental Reimbursement</span><span class="cov-val">' + p.coverage.rental + '</span></li>' +
+      '<li><span class="cov-name">Roadside Assistance</span><span class="cov-val">' + p.coverage.roadside + '</span></li>' +
+      '<li><span class="cov-name">Rideshare Coverage</span><span class="cov-val">' + p.coverage.rideshare + '</span></li>';
+  }
+  
+  // ── CLAIMS VIEW ──
+  var claimsContainer = document.querySelector('#view-claims .scroll-content');
+  if (claimsContainer) {
+    var claimsHTML = '<button class="new-claim-btn"><span>+</span> File a New Claim</button>' +
+      '<div style="padding:0 16px;margin-top:16px;"><div class="section-title" style="margin-top:0;">Recent Claims</div></div>';
+    
+    if (p.claims.length === 0) {
+      claimsHTML += '<div style="padding:16px;text-align:center;color:#8e8e93;font-size:14px;">No claims on file</div>';
+    } else {
+      p.claims.forEach(function(claim) {
+        var dotColor = claim.status === 'Closed' ? '#4cd964' : '#ff9500';
+        var badgeStyle = claim.status === 'Closed' ? 'background:#d4edda;color:#1a7a35;' : 'background:#fff3cd;color:#856404;';
+        claimsHTML += '<div class="claim-card">' +
+          '<div class="claim-status-dot" style="background:' + dotColor + ';"></div>' +
+          '<div style="flex:1;">' +
+          '<div class="claim-title">' + claim.title + '</div>' +
+          '<div class="claim-sub">Claim ' + claim.number + ' · Filed ' + claim.date + '</div>' +
+          '<div class="claim-sub" style="margin-top:4px;">' + claim.label + ': ' + claim.amount + '</div>' +
+          '</div>' +
+          '<div><span class="claim-badge" style="' + badgeStyle + '">' + claim.status + '</span></div>' +
+          '</div>';
+      });
+    }
+    
+    claimsHTML += '<div style="padding:16px;">' +
+      '<div class="info-card">' +
+      '<div class="info-card-header"><h3>Need Help with a Claim?</h3></div>' +
+      '<p style="font-size:14px;color:#3c3c43;line-height:1.5;margin-bottom:14px;">' +
+      'Our claims specialists are available 24/7 to assist you through the claims process.</p>' +
+      '<button onclick="navigateTo(\'chat\')" style="background:#cc2228;color:#fff;border:none;border-radius:12px;width:100%;height:44px;font-size:15px;font-weight:600;cursor:pointer;">' +
+      'Chat with Claims Support</button></div></div><div style="height:80px;"></div>';
+    
+    claimsContainer.innerHTML = claimsHTML;
+  }
+  
+  // ── PAYMENTS VIEW ──
+  var paymentAmountBanner = document.querySelector('#view-payment .scroll-content > div:first-child > div:nth-child(2)');
+  if (paymentAmountBanner) paymentAmountBanner.textContent = p.payment.amount;
+  
+  var paymentDueBanner = document.querySelector('#view-payment .scroll-content > div:first-child > div:nth-child(3)');
+  if (paymentDueBanner) paymentDueBanner.textContent = 'Due ' + p.payment.nextDateShort + ' · AutoPay enrolled';
+  
+  var autopayCardLabel = document.querySelector('#view-payment .toggle-sub');
+  if (autopayCardLabel) autopayCardLabel.textContent = p.payment.cardShort;
+  
+  // Payment schedule
+  var paymentSchedule = document.querySelector('#view-payment .payment-detail-card:nth-of-type(1)');
+  if (paymentSchedule) {
+    var scheduleHTML = '<div class="info-card-header"><h3>Payment Schedule</h3></div>';
+    p.payment.history.forEach(function(h) {
+      var color = h.status === 'upcoming' ? '#ff9500' : '#4cd964';
+      var label = h.status === 'upcoming' ? '(upcoming)' : '✓ Paid';
+      scheduleHTML += '<div class="pay-row"><span class="label">' + h.date + '</span>' +
+        '<span class="value" style="color:' + color + ';">' + h.amount + ' ' + label + '</span></div>';
+    });
+    paymentSchedule.innerHTML = scheduleHTML;
+  }
+  
+  // Premium breakdown
+  var premiumBreakdown = document.querySelector('#view-payment .payment-detail-card:nth-of-type(2)');
+  if (premiumBreakdown) {
+    premiumBreakdown.innerHTML =
+      '<div class="info-card-header"><h3>Premium Breakdown</h3></div>' +
+      '<div class="pay-row"><span class="label">Bodily Injury / PD</span><span class="value">' + p.payment.breakdown.bi + '</span></div>' +
+      '<div class="pay-row"><span class="label">Comprehensive</span><span class="value">' + p.payment.breakdown.comp + '</span></div>' +
+      '<div class="pay-row"><span class="label">Collision</span><span class="value">' + p.payment.breakdown.coll + '</span></div>' +
+      '<div class="pay-row"><span class="label">UM / UIM</span><span class="value">' + p.payment.breakdown.um + '</span></div>' +
+      '<div class="pay-row"><span class="label">Roadside / Rental</span><span class="value">' + p.payment.breakdown.roadside + '</span></div>' +
+      '<div class="pay-row"><span class="label">State Fees &amp; Taxes</span><span class="value">' + p.payment.breakdown.fees + '</span></div>' +
+      '<div class="pay-row" style="font-weight:700;"><span class="label" style="color:#1c1c1e;font-weight:700;">Total / Month</span><span class="value">' + p.payment.amount + '</span></div>';
+  }
+  
+  // ── PROFILE VIEW ──
+  var profileAvatar = document.querySelector('#view-profile .profile-avatar');
+  if (profileAvatar) profileAvatar.textContent = p._initials;
+  
+  var profileName = document.querySelector('#view-profile .profile-name');
+  if (profileName) profileName.textContent = p._fullName;
+  
+  var profileEmail = document.querySelector('#view-profile .profile-email');
+  if (profileEmail) profileEmail.textContent = p._email;
+  
+  var profileMember = document.querySelector('#view-profile .profile-member');
+  if (profileMember) profileMember.textContent = 'Member since ' + p.memberSince + ' · Policy ' + p.policy.number;
+  
+  var agentRow = document.querySelector('#view-profile .profile-row:nth-of-type(4) .profile-row-label');
+  if (agentRow) agentRow.textContent = 'My Agent — ' + p.agent.name;
+  
+  // ── ID CARD MODAL ──
+  var idCardName = document.querySelector('#idCardModal .id-card-body > div:nth-child(1) .id-field-value');
+  if (idCardName) idCardName.textContent = p._fullName;
+  
+  var idCardPolicy = document.querySelector('#idCardModal .id-card-body > div:nth-child(2) .id-field-value');
+  if (idCardPolicy) idCardPolicy.textContent = p.policy.number;
+  
+  var idCardVehicle = document.querySelector('#idCardModal .id-card-body > div:nth-child(3) .id-field-value');
+  if (idCardVehicle) idCardVehicle.textContent = p._vehicleShort;
+  
+  var idCardVin = document.querySelector('#idCardModal .id-card-body > div:nth-child(4) .id-field-value');
+  if (idCardVin) idCardVin.textContent = p.vehicle.vin;
+  
+  var idCardEffective = document.querySelector('#idCardModal .id-card-body > div:nth-child(5) .id-field-value');
+  if (idCardEffective) idCardEffective.textContent = p.policy.effectiveFmt;
+  
+  var idCardExpires = document.querySelector('#idCardModal .id-card-body > div:nth-child(6) .id-field-value');
+  if (idCardExpires) idCardExpires.textContent = p.policy.expirationFmt;
+  
+  // ── CHAT PRE-FILL ──
+  var prechatName = document.getElementById('prechatName');
+  if (prechatName) prechatName.value = p._fullName;
+  
+  var prechatEmail = document.getElementById('prechatEmail');
+  if (prechatEmail) prechatEmail.value = p.chatEmail;
+}
+
 let pendingPhone = '';
 
 function showRegistrationModal(phone) {
@@ -1778,7 +2000,12 @@ async function submitRegistration() {
   const person = await jdsCreatePerson(firstName, lastName, email, pendingPhone);
   
   const personObj = person && person.id ? person : { firstName: [firstName], lastName: [lastName], email: [email], phone: [pendingPhone] };
-  personalizeUI(personObj);
+  
+  const profileIdx = getProfileIndex(pendingPhone);
+  const baseProfile = DEMO_PROFILES[profileIdx];
+  const ep = enrichProfile(baseProfile, personObj);
+  applyDemoProfile(ep);
+  
   showToast('Welcome, ' + firstName + '!');
   
   // Proceed to home
@@ -1813,10 +2040,16 @@ async function doLogin() {
   if (hintEl) { hintEl.textContent = ''; hintEl.className = 'field-hint'; }
   localStorage.setItem('farmers_demo_phone', cleaned);
   
+  // Compute profile based on phone number
+  const profileIdx = getProfileIndex(cleaned);
+  const baseProfile = DEMO_PROFILES[profileIdx];
+  
   // Check if JDS token is configured
   const token = getJdsToken();
   if (!token) {
     showToast('No JDS token — using default profile');
+    const ep = enrichProfile(baseProfile, null);
+    applyDemoProfile(ep);
     navigateTo('home', true);
     history.replaceState({view: 'home'}, '');
     return;
@@ -1832,7 +2065,8 @@ async function doLogin() {
   const person = await jdsLookupPerson(cleaned);
   
   if (person && (person.firstName || person.lastName || person.id)) {
-    personalizeUI(person);
+    const ep = enrichProfile(baseProfile, person);
+    applyDemoProfile(ep);
     const fn = (Array.isArray(person.firstName) ? person.firstName[0] : person.firstName) || '';
     showToast('Welcome back, ' + fn + '!');
     loadingEl.classList.remove('active');
@@ -1883,7 +2117,8 @@ function toggleAutopay() {
 
 // ── Pay Now ───────────────────────────────────────
 function handlePayNow() {
-  showToast('Processing payment of $123.67...');
+  var amount = currentProfile ? currentProfile.payment.amount : '$123.67';
+  showToast('Processing payment of ' + amount + '...');
   setTimeout(() => showToast('✓ Payment successful! Confirmation #7741'), 2000);
 }
 
