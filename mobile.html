@@ -996,7 +996,7 @@
             <div class="qa-icon" style="background:#fff0f0;">💳</div>
             <span class="qa-label">Pay Bill</span>
           </button>
-          <button class="qa-btn" onclick="navigateTo('claims')">
+          <button class="qa-btn" onclick="jdsPostEvent('action:file-claim', {uiData:{title:'File Claim',iconType:'claim',subTitle:'Started new claim filing',filterTags:['claim','action']}}); navigateTo('claims')">
             <div class="qa-icon" style="background:#fff8e6;">📋</div>
             <span class="qa-label">File Claim</span>
           </button>
@@ -1478,10 +1478,10 @@
           </div>
         </div>
         <div style="text-align:center;padding:0 20px;">
-          <button onclick="showToast('ID Card saved to Photos');closeIDCard();" style="background:#cc2228;color:#fff;border:none;border-radius:12px;width:100%;height:48px;font-size:15px;font-weight:600;cursor:pointer;margin-bottom:10px;">
+          <button onclick="jdsPostEvent('action:save-wallet', {uiData:{title:'Save to Wallet',iconType:'wallet',subTitle:'Saved ID card to digital wallet',filterTags:['id-card','action']}}); showToast('ID Card saved to Photos');closeIDCard();" style="background:#cc2228;color:#fff;border:none;border-radius:12px;width:100%;height:48px;font-size:15px;font-weight:600;cursor:pointer;margin-bottom:10px;">
             📲 Save to Wallet
           </button>
-          <button onclick="showToast('ID Card sent to email');closeIDCard();" style="background:#f2f2f7;color:#1c1c1e;border:none;border-radius:12px;width:100%;height:44px;font-size:15px;cursor:pointer;">
+          <button onclick="jdsPostEvent('action:email-id-card', {uiData:{title:'Email ID Card',iconType:'email',subTitle:'Requested ID card via email',filterTags:['id-card','action']}}); showToast('ID Card sent to email');closeIDCard();" style="background:#f2f2f7;color:#1c1c1e;border:none;border-radius:12px;width:100%;height:44px;font-size:15px;cursor:pointer;">
             ✉️ Email ID Card
           </button>
         </div>
@@ -1712,6 +1712,42 @@ async function jdsCreatePerson(firstName, lastName, email, phone) {
     showToast('JDS connection error');
     return null;
   }
+}
+
+function _uuid() {
+  return crypto.randomUUID ? crypto.randomUUID() :
+    'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      var r = Math.random() * 16 | 0;
+      return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+    });
+}
+
+function jdsPostEvent(action, detail) {
+  var token = getJdsToken();
+  if (!token) return;
+  var phone = localStorage.getItem('farmers_demo_phone') || '';
+  if (!phone) return;
+
+  var body = {
+    specversion: '1.0',
+    type: action,
+    source: 'farmers-insurance-demo/mobile',
+    id: _uuid(),
+    time: new Date().toISOString(),
+    identity: phone,
+    identitytype: 'phone',
+    datacontenttype: 'application/json',
+    data: Object.assign({
+      origin: phone,
+      channelType: 'mobile-web'
+    }, detail || {})
+  };
+
+  fetch(getJdsBase() + '/publish/v1/api/event?workspaceId=' + JDS_WORKSPACE, {
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  }).catch(function(err) { console.warn('JDS event error:', err); });
 }
 
 function personalizeUI(person) {
@@ -2012,6 +2048,7 @@ async function submitRegistration() {
   loadingEl.classList.remove('active');
   document.querySelector('.btn-login').style.display = '';
   document.querySelectorAll('#view-login .input-group').forEach(function(el) { el.style.display = ''; });
+  jdsPostEvent('action:register', {uiData:{title:'Register',iconType:'register',subTitle:'Customer registered new account',filterTags:['register','action']}});
   navigateTo('home', true);
   history.replaceState({view: 'home'}, '');
 }
@@ -2050,6 +2087,7 @@ async function doLogin() {
     showToast('No JDS token — using default profile');
     const ep = enrichProfile(baseProfile, null);
     applyDemoProfile(ep);
+    jdsPostEvent('action:login', {uiData:{title:'Login',iconType:'login',subTitle:'Customer logged in',filterTags:['login','action']}});
     navigateTo('home', true);
     history.replaceState({view: 'home'}, '');
     return;
@@ -2072,6 +2110,7 @@ async function doLogin() {
     loadingEl.classList.remove('active');
     document.querySelector('.btn-login').style.display = '';
     document.querySelectorAll('#view-login .input-group').forEach(function(el) { el.style.display = ''; });
+    jdsPostEvent('action:login', {uiData:{title:'Login',iconType:'login',subTitle:'Customer logged in',filterTags:['login','action']}});
     navigateTo('home', true);
     history.replaceState({view: 'home'}, '');
   } else {
@@ -2117,6 +2156,7 @@ function toggleAutopay() {
 
 // ── Pay Now ───────────────────────────────────────
 function handlePayNow() {
+  jdsPostEvent('action:pay-now', {amount: currentProfile ? currentProfile.payment.amount : '', uiData:{title:'Pay Now',iconType:'payment',subTitle:'Initiated payment',filterTags:['payment','action']}});
   var amount = currentProfile ? currentProfile.payment.amount : '$123.67';
   showToast('Processing payment of ' + amount + '...');
   setTimeout(() => showToast('✓ Payment successful! Confirmation #7741'), 2000);
@@ -2124,6 +2164,7 @@ function handlePayNow() {
 
 // ── Webex Connect — Live Chat (IMI Widget) ───────
 function launchWebexChat() {
+  jdsPostEvent('action:start-chat', {uiData:{title:'Start Chat',iconType:'chat',subTitle:'Initiated live chat with support',filterTags:['chat','action']}});
   var nameVal = (document.getElementById('prechatName').value || '').trim();
   var emailVal = (document.getElementById('prechatEmail').value || '').trim();
   if (!nameVal || !emailVal) {

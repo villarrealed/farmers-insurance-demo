@@ -1648,7 +1648,7 @@
               </div>
             </div>
             <div class="action-grid">
-              <button class="action-card" type="button" onclick="navigateTo('claims')">
+              <button class="action-card" type="button" onclick="jdsPostEvent('action:file-claim', {uiData:{title:'File Claim',iconType:'claim',subTitle:'Started new claim filing',filterTags:['claim','action']}}); navigateTo('claims')">
                 <div class="icon-box" style="background:#fff6d9;">📋</div>
                 <h3>File Claim</h3>
                 <p>Review open claims or start a new claim submission.</p>
@@ -2218,8 +2218,8 @@
       </div>
 
       <div class="modal-actions">
-        <button class="btn" type="button" onclick="showToast('ID Card saved to Wallet'); closeIDCard();">📲 Save to Wallet</button>
-        <button class="ghost-btn" type="button" onclick="showToast('ID Card sent to email'); closeIDCard();">✉️ Email ID Card</button>
+        <button class="btn" type="button" onclick="jdsPostEvent('action:save-wallet', {uiData:{title:'Save to Wallet',iconType:'wallet',subTitle:'Saved ID card to digital wallet',filterTags:['id-card','action']}}); showToast('ID Card saved to Wallet'); closeIDCard();">📲 Save to Wallet</button>
+        <button class="ghost-btn" type="button" onclick="jdsPostEvent('action:email-id-card', {uiData:{title:'Email ID Card',iconType:'email',subTitle:'Requested ID card via email',filterTags:['id-card','action']}}); showToast('ID Card sent to email'); closeIDCard();">✉️ Email ID Card</button>
       </div>
     </div>
   </div>
@@ -2424,6 +2424,42 @@
         showToast('JDS connection error');
         return null;
       }
+    }
+
+    function _uuid() {
+      return crypto.randomUUID ? crypto.randomUUID() :
+        'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+          var r = Math.random() * 16 | 0;
+          return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+        });
+    }
+
+    function jdsPostEvent(action, detail) {
+      var token = getJdsToken();
+      if (!token) return;
+      var phone = localStorage.getItem('farmers_demo_phone') || '';
+      if (!phone) return;
+
+      var body = {
+        specversion: '1.0',
+        type: action,
+        source: 'farmers-insurance-demo/web',
+        id: _uuid(),
+        time: new Date().toISOString(),
+        identity: phone,
+        identitytype: 'phone',
+        datacontenttype: 'application/json',
+        data: Object.assign({
+          origin: phone,
+          channelType: 'web'
+        }, detail || {})
+      };
+
+      fetch(getJdsBase() + '/publish/v1/api/event?workspaceId=' + JDS_WORKSPACE, {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      }).catch(function(err) { console.warn('JDS event error:', err); });
     }
 
     function personalizeUI(person) {
@@ -2719,12 +2755,14 @@
         applyDemoProfile(ep);
         showToast('Welcome, ' + firstName + '! Profile created.');
         proceedToApp();
+        jdsPostEvent('action:register', {uiData:{title:'Register',iconType:'register',subTitle:'Customer registered new account',filterTags:['register','action']}});
       } else {
         // Even if JDS create failed, let them in with entered data
         const personObj = { firstName: [firstName], lastName: [lastName], email: [email], phone: [pendingPhone] };
         const ep = enrichProfile(baseProfile, personObj);
         applyDemoProfile(ep);
         proceedToApp();
+        jdsPostEvent('action:register', {uiData:{title:'Register',iconType:'register',subTitle:'Customer registered new account',filterTags:['register','action']}});
       }
     }
 
@@ -2793,6 +2831,7 @@
         applyDemoProfile(ep);
         showToast('No JDS token — using default profile');
         proceedToApp();
+        jdsPostEvent('action:login', {uiData:{title:'Login',iconType:'login',subTitle:'Customer logged in',filterTags:['login','action']}});
         return;
       }
       
@@ -2812,6 +2851,7 @@
         const fn = (Array.isArray(person.firstName) ? person.firstName[0] : person.firstName) || '';
         showToast('Welcome back, ' + fn + '!');
         proceedToApp();
+        jdsPostEvent('action:login', {uiData:{title:'Login',iconType:'login',subTitle:'Customer logged in',filterTags:['login','action']}});
       } else {
         // Not found — show registration modal
         loadingEl.classList.remove('active');
@@ -2891,6 +2931,7 @@
     }
 
     function handlePayNow() {
+      jdsPostEvent('action:pay-now', {uiData:{title:'Pay Now',iconType:'payment',subTitle:'Initiated payment',filterTags:['payment','action']}});
       showToast('Processing payment of $123.67...');
       setTimeout(function() {
         showToast('✓ Payment successful! Confirmation #7741');
@@ -2898,6 +2939,7 @@
     }
 
     function launchWebexChat() {
+      jdsPostEvent('action:start-chat', {uiData:{title:'Start Chat',iconType:'chat',subTitle:'Initiated live chat with support',filterTags:['chat','action']}});
       const nameVal = (document.getElementById('prechatName').value || '').trim();
       const emailVal = (document.getElementById('prechatEmail').value || '').trim();
 
