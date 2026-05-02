@@ -2373,9 +2373,13 @@
           headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' }
         });
         if (resp.ok) {
-          const data = await resp.json();
-          console.log('JDS person found:', data);
-          return data;
+          const result = await resp.json();
+          console.log('JDS person found:', result);
+          // API returns { data: [...], meta: {...} } — pick the best person (one with a name)
+          const persons = result.data || [result];
+          const best = persons.find(p => p.firstName && p.firstName !== null) || persons[0] || null;
+          console.log('JDS best match:', best);
+          return best;
         }
         if (resp.status === 404) {
           console.log('JDS person not found with any format:', formats);
