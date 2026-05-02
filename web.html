@@ -1344,6 +1344,133 @@
     .hide-mobile { display: none; }
     .login-aux { flex-direction: column; align-items: flex-start; }
   }
+
+  /* ── Settings Gear ── */
+  .settings-gear {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 9999;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: var(--surface-strong);
+    border: 1px solid var(--line);
+    box-shadow: var(--shadow-soft);
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    font-size: 1.2rem;
+    transition: transform .2s;
+  }
+  .settings-gear:hover { transform: rotate(30deg); }
+
+  /* ── Settings Panel ── */
+  .settings-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    background: rgba(0,0,0,.4);
+    backdrop-filter: blur(4px);
+    place-items: center;
+  }
+  .settings-overlay.open { display: grid; }
+  .settings-panel {
+    background: var(--surface-strong);
+    border-radius: var(--radius);
+    padding: 28px;
+    width: min(440px, 90vw);
+    box-shadow: var(--shadow);
+  }
+  .settings-panel h3 { margin: 0 0 8px; font-size: 1.2rem; }
+  .settings-panel p { margin: 0 0 16px; color: var(--muted); font-size: .9rem; }
+  .settings-panel label { display: block; font-weight: 600; font-size: .85rem; margin-bottom: 6px; }
+  .settings-panel input, .settings-panel textarea {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    font: inherit;
+    font-size: .92rem;
+    margin-bottom: 16px;
+  }
+  .settings-panel textarea { min-height: 80px; resize: vertical; font-family: monospace; font-size: .82rem; }
+  .settings-actions { display: flex; gap: 10px; justify-content: flex-end; }
+  .settings-actions button {
+    padding: 10px 20px;
+    border-radius: 12px;
+    border: none;
+    cursor: pointer;
+    font: inherit;
+    font-weight: 600;
+  }
+  .settings-save { background: var(--brand); color: #fff; }
+  .settings-cancel { background: transparent; color: var(--muted); }
+  .token-status { font-size: .78rem; padding: 6px 10px; border-radius: 8px; margin-bottom: 14px; }
+  .token-status.ok { background: var(--success-bg); color: var(--success-fg); }
+  .token-status.missing { background: var(--warn-bg); color: var(--warn-fg); }
+
+  /* ── Registration Modal ── */
+  .register-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 10001;
+    background: rgba(0,0,0,.45);
+    backdrop-filter: blur(6px);
+    place-items: center;
+  }
+  .register-overlay.open { display: grid; }
+  .register-card {
+    background: var(--surface-strong);
+    border-radius: var(--radius);
+    padding: 32px;
+    width: min(460px, 92vw);
+    box-shadow: var(--shadow);
+  }
+  .register-card h3 { margin: 0 0 6px; font-size: 1.2rem; }
+  .register-card .subtitle { margin: 0 0 20px; color: var(--muted); font-size: .92rem; }
+  .register-card label { display: block; font-weight: 600; font-size: .85rem; margin-bottom: 4px; }
+  .register-card input {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    font: inherit;
+    font-size: .92rem;
+    margin-bottom: 14px;
+  }
+  .register-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 6px; }
+  .register-actions button {
+    padding: 10px 22px;
+    border-radius: 12px;
+    border: none;
+    cursor: pointer;
+    font: inherit;
+    font-weight: 600;
+  }
+  .register-submit { background: var(--brand); color: #fff; }
+  .register-cancel { background: transparent; color: var(--muted); }
+
+  /* ── Login Loading State ── */
+  .login-loading {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 24px 0;
+  }
+  .login-loading.active { display: flex; }
+  .login-loading .spinner {
+    width: 32px; height: 32px;
+    border: 3px solid var(--line);
+    border-top-color: var(--brand);
+    border-radius: 50%;
+    animation: spin .8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .login-loading span { color: var(--muted); font-size: .9rem; }
   </style>
 </head>
 <body>
@@ -1396,6 +1523,10 @@
           </div>
 
           <button class="login-signin" type="submit">Sign In</button>
+          <div class="login-loading" id="loginLoading">
+            <div class="spinner"></div>
+            <span>Looking up your profile...</span>
+          </div>
         </form>
 
         <div class="login-aux">
@@ -2093,6 +2224,42 @@
     </div>
   </div>
 
+  <!-- Settings Gear -->
+  <button class="settings-gear" onclick="openSettings()" title="JDS Settings">⚙️</button>
+
+  <!-- Settings Panel -->
+  <div class="settings-overlay" id="settingsOverlay" onclick="if(event.target===this)closeSettings()">
+    <div class="settings-panel">
+      <h3>JDS Configuration</h3>
+      <p>Configure your Journey Data Service token for person lookup and creation.</p>
+      <div class="token-status missing" id="tokenStatus">No token configured</div>
+      <label for="jdsTokenInput">Bearer Token</label>
+      <textarea id="jdsTokenInput" placeholder="Paste your JDS Bearer token here..."></textarea>
+      <div class="settings-actions">
+        <button class="settings-cancel" onclick="closeSettings()">Cancel</button>
+        <button class="settings-save" onclick="saveSettings()">Save Token</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Registration Modal -->
+  <div class="register-overlay" id="registerOverlay">
+    <div class="register-card">
+      <h3>Complete Your Profile</h3>
+      <p class="subtitle">We couldn't find your profile. Please provide your details to get started.</p>
+      <label for="regFirstName">First Name</label>
+      <input id="regFirstName" type="text" placeholder="John" autocomplete="given-name">
+      <label for="regLastName">Last Name</label>
+      <input id="regLastName" type="text" placeholder="Doe" autocomplete="family-name">
+      <label for="regEmail">Email Address</label>
+      <input id="regEmail" type="email" placeholder="john.doe@example.com" autocomplete="email">
+      <div class="register-actions">
+        <button class="register-cancel" onclick="cancelRegistration()">Cancel</button>
+        <button class="register-submit" onclick="submitRegistration()">Create Profile</button>
+      </div>
+    </div>
+  </div>
+
   <div class="toast" id="toast" aria-live="polite"></div>
 
   <script>
@@ -2124,14 +2291,211 @@
       el.value = display;
     }
 
-    function doLogin() {
+    // ── JDS Integration ──────────────────────────────
+    const JDS_BASE = 'https://jds-us1.cjaas.cisco.com';
+    const JDS_WORKSPACE = '6501bc14c618a0228c58566c';
+    let currentJdsUser = null; // stores the looked-up person
+
+    function getJdsToken() {
+      return localStorage.getItem('farmers_jds_token') || '';
+    }
+
+    function openSettings() {
+      const overlay = document.getElementById('settingsOverlay');
+      const input = document.getElementById('jdsTokenInput');
+      const status = document.getElementById('tokenStatus');
+      const token = getJdsToken();
+      input.value = token;
+      if (token) {
+        status.textContent = '✓ Token configured';
+        status.className = 'token-status ok';
+      } else {
+        status.textContent = 'No token configured';
+        status.className = 'token-status missing';
+      }
+      overlay.classList.add('open');
+    }
+
+    function closeSettings() {
+      document.getElementById('settingsOverlay').classList.remove('open');
+    }
+
+    function saveSettings() {
+      const token = document.getElementById('jdsTokenInput').value.trim();
+      if (token) {
+        localStorage.setItem('farmers_jds_token', token);
+        showToast('JDS token saved');
+      } else {
+        localStorage.removeItem('farmers_jds_token');
+        showToast('JDS token cleared');
+      }
+      closeSettings();
+    }
+
+    async function jdsLookupPerson(phone) {
+      const token = getJdsToken();
+      if (!token) return null;
+      
+      try {
+        const url = JDS_BASE + '/admin/v1/api/person/workspace-id/' + JDS_WORKSPACE + '/aliases/' + encodeURIComponent(phone);
+        const resp = await fetch(url, {
+          method: 'GET',
+          headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' }
+        });
+        if (resp.ok) {
+          const data = await resp.json();
+          return data; // person object
+        }
+        if (resp.status === 404) return null;
+        console.warn('JDS lookup failed:', resp.status, await resp.text());
+        return null;
+      } catch (err) {
+        console.warn('JDS lookup error:', err);
+        return null;
+      }
+    }
+
+    async function jdsCreatePerson(firstName, lastName, email, phone) {
+      const token = getJdsToken();
+      if (!token) { showToast('No JDS token configured'); return null; }
+      
+      try {
+        const url = JDS_BASE + '/admin/v1/api/person/workspace-id/' + JDS_WORKSPACE;
+        const body = {
+          firstName: [firstName],
+          lastName: [lastName],
+          phone: [phone],
+          email: [email]
+        };
+        const resp = await fetch(url, {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        if (resp.ok || resp.status === 201) {
+          const data = await resp.json();
+          return data;
+        }
+        console.warn('JDS create failed:', resp.status, await resp.text());
+        showToast('Failed to create profile in JDS');
+        return null;
+      } catch (err) {
+        console.warn('JDS create error:', err);
+        showToast('JDS connection error');
+        return null;
+      }
+    }
+
+    function personalizeUI(person) {
+      if (!person) return;
+      
+      // Extract first name and last name
+      const firstName = (Array.isArray(person.firstName) ? person.firstName[0] : person.firstName) || '';
+      const lastName = (Array.isArray(person.lastName) ? person.lastName[0] : person.lastName) || '';
+      const initials = ((firstName[0] || '') + (lastName[0] || '')).toUpperCase() || '??';
+      const fullName = (firstName + ' ' + lastName).trim();
+      
+      // Update greeting on home page (line ~1443)
+      const heroH1 = document.querySelector('#view-home .hero-panel h1');
+      if (heroH1) {
+        heroH1.innerHTML = 'Hi, ' + firstName + '<span class="hide-mobile"> ' + lastName + '</span> 👋';
+      }
+      
+      // Update avatar initials in topbar (line ~1433)
+      const avatar = document.querySelector('.meta-avatar');
+      if (avatar) avatar.textContent = initials;
+      
+      // Store for other uses (like pre-filling chat)
+      currentJdsUser = person;
+      
+      // Pre-fill chat prechat form if available
+      const prechatName = document.getElementById('prechatName');
+      const prechatEmail = document.getElementById('prechatEmail');
+      if (prechatName && fullName) prechatName.value = fullName;
+      const email = (Array.isArray(person.email) ? person.email[0] : person.email) || '';
+      if (prechatEmail && email) prechatEmail.value = email;
+    }
+
+    // Registration flow state
+    let pendingPhone = '';
+    let pendingPassword = '';
+
+    function showRegistrationModal(phone) {
+      pendingPhone = phone;
+      document.getElementById('registerOverlay').classList.add('open');
+      document.getElementById('regFirstName').focus();
+    }
+
+    function cancelRegistration() {
+      document.getElementById('registerOverlay').classList.remove('open');
+      document.getElementById('loginLoading').classList.remove('active');
+      document.querySelector('.login-form').style.display = '';
+      pendingPhone = '';
+    }
+
+    async function submitRegistration() {
+      const firstName = document.getElementById('regFirstName').value.trim();
+      const lastName = document.getElementById('regLastName').value.trim();
+      const email = document.getElementById('regEmail').value.trim();
+      
+      if (!firstName || !lastName) {
+        showToast('Please enter your first and last name');
+        return;
+      }
+      if (!email || !email.includes('@')) {
+        showToast('Please enter a valid email address');
+        return;
+      }
+      
+      document.getElementById('registerOverlay').classList.remove('open');
+      
+      // Show loading
+      const loadingEl = document.getElementById('loginLoading');
+      loadingEl.querySelector('span').textContent = 'Creating your profile...';
+      loadingEl.classList.add('active');
+      
+      const person = await jdsCreatePerson(firstName, lastName, email, pendingPhone);
+      
+      if (person) {
+        // Build a person-like object for personalization
+        const personObj = person.id ? person : { firstName: [firstName], lastName: [lastName], email: [email], phone: [pendingPhone] };
+        personalizeUI(personObj);
+        showToast('Welcome, ' + firstName + '! Profile created.');
+        proceedToApp();
+      } else {
+        // Even if JDS create failed, let them in with entered data
+        personalizeUI({ firstName: [firstName], lastName: [lastName], email: [email], phone: [pendingPhone] });
+        proceedToApp();
+      }
+    }
+
+    function proceedToApp() {
+      const loadingEl = document.getElementById('loginLoading');
+      loadingEl.classList.remove('active');
+      document.querySelector('.login-form').style.display = '';
+      
+      const loginView = document.getElementById('login-view');
+      const appWrapper = document.getElementById('app-wrapper');
+      
+      loginView.classList.add('is-leaving');
+      
+      window.setTimeout(function() {
+        loginView.style.display = 'none';
+        appWrapper.style.display = 'block';
+        appWrapper.setAttribute('aria-hidden', 'false');
+        
+        window.requestAnimationFrame(function() {
+          appWrapper.classList.add('app-visible');
+        });
+      }, 360);
+    }
+
+    async function doLogin() {
       const phoneEl = document.getElementById('loginPhone');
       const cleaned = phoneEl.getAttribute('data-raw') || '';
       const password = (document.getElementById('loginPassword').value || '').trim();
       
-      // Validate: must be +1 followed by exactly 10 digits
       const phoneRegex = /^\+1\d{10}$/;
-      
       const hintEl = document.getElementById('phoneHint');
       
       if (!cleaned) {
@@ -2151,26 +2515,39 @@
         return;
       }
       
-      // Save to localStorage
+      // Save phone to localStorage
       localStorage.setItem('farmers_demo_phone', cleaned);
-      
-      // Clear hint
       if (hintEl) { hintEl.textContent = ''; hintEl.className = 'field-hint'; }
       
-      const loginView = document.getElementById('login-view');
-      const appWrapper = document.getElementById('app-wrapper');
+      // Check if JDS token is configured
+      const token = getJdsToken();
+      if (!token) {
+        // No token — skip JDS, go straight to app with default data
+        showToast('No JDS token — using default profile');
+        proceedToApp();
+        return;
+      }
       
-      loginView.classList.add('is-leaving');
+      // Show loading state
+      const loadingEl = document.getElementById('loginLoading');
+      document.querySelector('.login-form').style.display = 'none';
+      loadingEl.querySelector('span').textContent = 'Looking up your profile...';
+      loadingEl.classList.add('active');
       
-      window.setTimeout(function() {
-        loginView.style.display = 'none';
-        appWrapper.style.display = 'block';
-        appWrapper.setAttribute('aria-hidden', 'false');
-        
-        window.requestAnimationFrame(function() {
-          appWrapper.classList.add('app-visible');
-        });
-      }, 360);
+      // Lookup in JDS
+      const person = await jdsLookupPerson(cleaned);
+      
+      if (person && (person.firstName || person.lastName || person.id)) {
+        // Found! Personalize and proceed
+        personalizeUI(person);
+        const fn = (Array.isArray(person.firstName) ? person.firstName[0] : person.firstName) || '';
+        showToast('Welcome back, ' + fn + '!');
+        proceedToApp();
+      } else {
+        // Not found — show registration modal
+        loadingEl.classList.remove('active');
+        showRegistrationModal(cleaned);
+      }
     }
 
     function doLogout() {

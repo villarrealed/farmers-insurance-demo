@@ -747,6 +747,142 @@
     .modal-overlay { border-radius: 0; }
     .dynamic-island { top: 6px; }
   }
+
+  /* ── Settings Gear ── */
+  .settings-gear {
+    position: fixed;
+    bottom: 16px;
+    right: 16px;
+    z-index: 9999;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: rgba(255,255,255,.15);
+    border: 1px solid rgba(255,255,255,.2);
+    backdrop-filter: blur(8px);
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: transform .2s;
+  }
+  .settings-gear:hover { transform: rotate(30deg); }
+
+  /* ── Settings Panel ── */
+  .settings-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    background: rgba(0,0,0,.6);
+    backdrop-filter: blur(4px);
+    place-items: center;
+  }
+  .settings-overlay.open { display: grid; }
+  .settings-panel {
+    background: #1e1e2e;
+    border-radius: 20px;
+    padding: 24px;
+    width: min(360px, 88vw);
+    box-shadow: 0 20px 50px rgba(0,0,0,.5);
+    color: #fff;
+  }
+  .settings-panel h3 { margin: 0 0 6px; font-size: 1.1rem; }
+  .settings-panel p { margin: 0 0 14px; color: rgba(255,255,255,.6); font-size: .82rem; }
+  .settings-panel label { display: block; font-weight: 600; font-size: .8rem; margin-bottom: 4px; color: rgba(255,255,255,.7); }
+  .settings-panel textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid rgba(255,255,255,.15);
+    border-radius: 12px;
+    background: rgba(255,255,255,.08);
+    color: #fff;
+    font-family: monospace;
+    font-size: .78rem;
+    min-height: 70px;
+    resize: vertical;
+    margin-bottom: 14px;
+  }
+  .settings-actions { display: flex; gap: 8px; justify-content: flex-end; }
+  .settings-actions button {
+    padding: 8px 18px;
+    border-radius: 12px;
+    border: none;
+    cursor: pointer;
+    font: inherit;
+    font-weight: 600;
+    font-size: .85rem;
+  }
+  .settings-save { background: #cc2228; color: #fff; }
+  .settings-cancel { background: transparent; color: rgba(255,255,255,.5); }
+  .token-status { font-size: .72rem; padding: 5px 8px; border-radius: 8px; margin-bottom: 12px; }
+  .token-status.ok { background: rgba(76,217,100,.15); color: #4cd964; }
+  .token-status.missing { background: rgba(255,149,0,.15); color: #ff9500; }
+
+  /* ── Registration Modal ── */
+  .register-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 10001;
+    background: rgba(0,0,0,.65);
+    backdrop-filter: blur(6px);
+    place-items: center;
+  }
+  .register-overlay.open { display: grid; }
+  .register-card {
+    background: #1e1e2e;
+    border-radius: 20px;
+    padding: 24px;
+    width: min(360px, 88vw);
+    box-shadow: 0 20px 50px rgba(0,0,0,.5);
+    color: #fff;
+  }
+  .register-card h3 { margin: 0 0 4px; font-size: 1.1rem; }
+  .register-card .reg-subtitle { margin: 0 0 16px; color: rgba(255,255,255,.6); font-size: .82rem; }
+  .register-card label { display: block; font-weight: 600; font-size: .8rem; margin-bottom: 4px; color: rgba(255,255,255,.7); }
+  .register-card input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid rgba(255,255,255,.15);
+    border-radius: 12px;
+    background: rgba(255,255,255,.08);
+    color: #fff;
+    font: inherit;
+    font-size: .88rem;
+    margin-bottom: 12px;
+  }
+  .register-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 4px; }
+  .register-actions button {
+    padding: 8px 18px;
+    border-radius: 12px;
+    border: none;
+    cursor: pointer;
+    font: inherit;
+    font-weight: 600;
+    font-size: .85rem;
+  }
+  .register-submit { background: #cc2228; color: #fff; }
+  .register-cancel { background: transparent; color: rgba(255,255,255,.5); }
+
+  /* ── Login Loading ── */
+  .login-loading-indicator {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 20px 0;
+  }
+  .login-loading-indicator.active { display: flex; }
+  .login-loading-indicator .spinner {
+    width: 28px; height: 28px;
+    border: 3px solid rgba(255,255,255,.2);
+    border-top-color: #cc2228;
+    border-radius: 50%;
+    animation: spin .8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .login-loading-indicator span { color: rgba(255,255,255,.6); font-size: .82rem; }
 </style>
 </head>
 <body>
@@ -796,6 +932,11 @@
           <input type="password" id="loginPass" placeholder="Password" autocomplete="off">
         </div>
         <button class="btn-login" onclick="doLogin()">Sign In</button>
+
+        <div class="login-loading-indicator" id="loginLoading">
+          <div class="spinner"></div>
+          <span>Looking up your profile...</span>
+        </div>
 
         <div class="login-links">
           <a href="#">Forgot Password?</a>
@@ -1351,6 +1492,42 @@
   </div>
 </div>
 
+<!-- Settings Gear -->
+<button class="settings-gear" onclick="openSettings()" title="JDS Settings">⚙️</button>
+
+<!-- Settings Panel -->
+<div class="settings-overlay" id="settingsOverlay" onclick="if(event.target===this)closeSettings()">
+  <div class="settings-panel">
+    <h3>JDS Configuration</h3>
+    <p>Configure your Journey Data Service token.</p>
+    <div class="token-status missing" id="tokenStatus">No token configured</div>
+    <label for="jdsTokenInput">Bearer Token</label>
+    <textarea id="jdsTokenInput" placeholder="Paste your JDS Bearer token here..."></textarea>
+    <div class="settings-actions">
+      <button class="settings-cancel" onclick="closeSettings()">Cancel</button>
+      <button class="settings-save" onclick="saveSettings()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Registration Modal -->
+<div class="register-overlay" id="registerOverlay">
+  <div class="register-card">
+    <h3>Complete Your Profile</h3>
+    <p class="reg-subtitle">We couldn't find your profile. Enter your details to get started.</p>
+    <label for="regFirstName">First Name</label>
+    <input id="regFirstName" type="text" placeholder="John">
+    <label for="regLastName">Last Name</label>
+    <input id="regLastName" type="text" placeholder="Doe">
+    <label for="regEmail">Email Address</label>
+    <input id="regEmail" type="email" placeholder="john@example.com">
+    <div class="register-actions">
+      <button class="register-cancel" onclick="cancelRegistration()">Cancel</button>
+      <button class="register-submit" onclick="submitRegistration()">Create Profile</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ── Clock ──────────────────────────────────────────
 function updateClock() {
@@ -1394,13 +1571,176 @@ function formatPhoneInput(el) {
   el.value = display;
 }
 
-function doLogin() {
+// ── JDS Integration ──────────────────────────────
+const JDS_BASE = 'https://jds-us1.cjaas.cisco.com';
+const JDS_WORKSPACE = '6501bc14c618a0228c58566c';
+let currentJdsUser = null;
+
+function getJdsToken() {
+  return localStorage.getItem('farmers_jds_token') || '';
+}
+
+function openSettings() {
+  const overlay = document.getElementById('settingsOverlay');
+  const input = document.getElementById('jdsTokenInput');
+  const status = document.getElementById('tokenStatus');
+  const token = getJdsToken();
+  input.value = token;
+  if (token) {
+    status.textContent = '✓ Token configured';
+    status.className = 'token-status ok';
+  } else {
+    status.textContent = 'No token configured';
+    status.className = 'token-status missing';
+  }
+  overlay.classList.add('open');
+}
+
+function closeSettings() {
+  document.getElementById('settingsOverlay').classList.remove('open');
+}
+
+function saveSettings() {
+  const token = document.getElementById('jdsTokenInput').value.trim();
+  if (token) {
+    localStorage.setItem('farmers_jds_token', token);
+    showToast('JDS token saved');
+  } else {
+    localStorage.removeItem('farmers_jds_token');
+    showToast('JDS token cleared');
+  }
+  closeSettings();
+}
+
+async function jdsLookupPerson(phone) {
+  const token = getJdsToken();
+  if (!token) return null;
+  
+  try {
+    const url = JDS_BASE + '/admin/v1/api/person/workspace-id/' + JDS_WORKSPACE + '/aliases/' + encodeURIComponent(phone);
+    const resp = await fetch(url, {
+      method: 'GET',
+      headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' }
+    });
+    if (resp.ok) return await resp.json();
+    if (resp.status === 404) return null;
+    console.warn('JDS lookup failed:', resp.status);
+    return null;
+  } catch (err) {
+    console.warn('JDS lookup error:', err);
+    return null;
+  }
+}
+
+async function jdsCreatePerson(firstName, lastName, email, phone) {
+  const token = getJdsToken();
+  if (!token) { showToast('No JDS token configured'); return null; }
+  
+  try {
+    const url = JDS_BASE + '/admin/v1/api/person/workspace-id/' + JDS_WORKSPACE;
+    const body = {
+      firstName: [firstName],
+      lastName: [lastName],
+      phone: [phone],
+      email: [email]
+    };
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    if (resp.ok || resp.status === 201) return await resp.json();
+    console.warn('JDS create failed:', resp.status);
+    showToast('Failed to create profile');
+    return null;
+  } catch (err) {
+    console.warn('JDS create error:', err);
+    showToast('JDS connection error');
+    return null;
+  }
+}
+
+function personalizeUI(person) {
+  if (!person) return;
+  
+  const firstName = (Array.isArray(person.firstName) ? person.firstName[0] : person.firstName) || '';
+  const lastName = (Array.isArray(person.lastName) ? person.lastName[0] : person.lastName) || '';
+  const initials = ((firstName[0] || '') + (lastName[0] || '')).toUpperCase() || '??';
+  
+  // Update home greeting (line ~812)
+  const nameEl = document.querySelector('#view-home .name');
+  if (nameEl) nameEl.textContent = 'Hi, ' + firstName + ' 👋';
+  
+  // Update avatar initials (line ~817)
+  const avatarBtn = document.querySelector('.avatar-btn');
+  if (avatarBtn) avatarBtn.textContent = initials;
+  
+  currentJdsUser = person;
+  
+  // Pre-fill chat form if available
+  const prechatName = document.getElementById('prechatName');
+  const prechatEmail = document.getElementById('prechatEmail');
+  const fullName = (firstName + ' ' + lastName).trim();
+  if (prechatName && fullName) prechatName.value = fullName;
+  const email = (Array.isArray(person.email) ? person.email[0] : person.email) || '';
+  if (prechatEmail && email) prechatEmail.value = email;
+}
+
+let pendingPhone = '';
+
+function showRegistrationModal(phone) {
+  pendingPhone = phone;
+  document.getElementById('registerOverlay').classList.add('open');
+  document.getElementById('regFirstName').focus();
+}
+
+function cancelRegistration() {
+  document.getElementById('registerOverlay').classList.remove('open');
+  // Hide loading, restore login form
+  document.getElementById('loginLoading').classList.remove('active');
+  document.querySelector('.btn-login').style.display = '';
+  document.querySelectorAll('#view-login .input-group').forEach(function(el) { el.style.display = ''; });
+  pendingPhone = '';
+}
+
+async function submitRegistration() {
+  const firstName = document.getElementById('regFirstName').value.trim();
+  const lastName = document.getElementById('regLastName').value.trim();
+  const email = document.getElementById('regEmail').value.trim();
+  
+  if (!firstName || !lastName) {
+    showToast('Please enter your first and last name');
+    return;
+  }
+  if (!email || !email.includes('@')) {
+    showToast('Please enter a valid email');
+    return;
+  }
+  
+  document.getElementById('registerOverlay').classList.remove('open');
+  
+  const loadingEl = document.getElementById('loginLoading');
+  loadingEl.querySelector('span').textContent = 'Creating your profile...';
+  loadingEl.classList.add('active');
+  
+  const person = await jdsCreatePerson(firstName, lastName, email, pendingPhone);
+  
+  const personObj = person && person.id ? person : { firstName: [firstName], lastName: [lastName], email: [email], phone: [pendingPhone] };
+  personalizeUI(personObj);
+  showToast('Welcome, ' + firstName + '!');
+  
+  // Proceed to home
+  loadingEl.classList.remove('active');
+  document.querySelector('.btn-login').style.display = '';
+  document.querySelectorAll('#view-login .input-group').forEach(function(el) { el.style.display = ''; });
+  navigateTo('home');
+}
+
+async function doLogin() {
   const cleaned = document.getElementById('loginPhone').getAttribute('data-raw') || '';
   const p = document.getElementById('loginPass').value.trim();
   
-  // Validate: must be +1 followed by exactly 10 digits
   const phoneRegex = /^\+1\d{10}$/;
-  
   const hintEl = document.getElementById('phoneHint');
   
   if (!cleaned) {
@@ -1417,13 +1757,38 @@ function doLogin() {
   
   if (!p) { showToast('Please enter a password'); return; }
   
-  // Clear error state
   if (hintEl) { hintEl.textContent = ''; hintEl.className = 'field-hint'; }
-  
-  // Cache phone number
   localStorage.setItem('farmers_demo_phone', cleaned);
   
-  navigateTo('home');
+  // Check if JDS token is configured
+  const token = getJdsToken();
+  if (!token) {
+    showToast('No JDS token — using default profile');
+    navigateTo('home');
+    return;
+  }
+  
+  // Show loading
+  const loadingEl = document.getElementById('loginLoading');
+  document.querySelector('.btn-login').style.display = 'none';
+  document.querySelectorAll('#view-login .input-group').forEach(function(el) { el.style.display = 'none'; });
+  loadingEl.querySelector('span').textContent = 'Looking up your profile...';
+  loadingEl.classList.add('active');
+  
+  const person = await jdsLookupPerson(cleaned);
+  
+  if (person && (person.firstName || person.lastName || person.id)) {
+    personalizeUI(person);
+    const fn = (Array.isArray(person.firstName) ? person.firstName[0] : person.firstName) || '';
+    showToast('Welcome back, ' + fn + '!');
+    loadingEl.classList.remove('active');
+    document.querySelector('.btn-login').style.display = '';
+    document.querySelectorAll('#view-login .input-group').forEach(function(el) { el.style.display = ''; });
+    navigateTo('home');
+  } else {
+    loadingEl.classList.remove('active');
+    showRegistrationModal(cleaned);
+  }
 }
 function doLogout() {
   // Don't clear phone - it's cached for convenience
