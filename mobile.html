@@ -1,0 +1,1465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Farmers Insurance – Demo App</title>
+<style>
+  /* ── Reset & Base ── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #1a1a2e;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+    overflow: hidden;
+  }
+
+  /* ── iPhone Shell ── */
+  .iphone-shell {
+    width: 393px;
+    height: 852px;
+    background: #000;
+    border-radius: 54px;
+    box-shadow:
+      0 0 0 2px #3a3a3c,
+      0 0 0 4px #1c1c1e,
+      0 30px 80px rgba(0,0,0,.8),
+      inset 0 0 0 1px #2c2c2e;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Dynamic Island */
+  .dynamic-island {
+    position: absolute;
+    top: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 120px;
+    height: 34px;
+    background: #000;
+    border-radius: 20px;
+    z-index: 999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  .di-camera { width: 10px; height: 10px; background: #1a1a1a; border-radius: 50%; border: 2px solid #2a2a2a; }
+  .di-dot { width: 6px; height: 6px; background: #333; border-radius: 50%; }
+
+  /* Side buttons */
+  .btn-side-vol-up   { position: absolute; left: -4px; top: 140px; width: 4px; height: 36px; background: #3a3a3c; border-radius: 2px 0 0 2px; }
+  .btn-side-vol-down { position: absolute; left: -4px; top: 188px; width: 4px; height: 36px; background: #3a3a3c; border-radius: 2px 0 0 2px; }
+  .btn-side-power    { position: absolute; right: -4px; top: 170px; width: 4px; height: 72px; background: #3a3a3c; border-radius: 0 2px 2px 0; }
+
+  /* Screen */
+  .screen {
+    width: 100%;
+    height: 100%;
+    border-radius: 52px;
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Status Bar */
+  .status-bar {
+    height: 54px;
+    background: transparent;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    padding: 0 28px 8px;
+    color: #fff;
+    font-size: 15px;
+    font-weight: 600;
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+  }
+  .status-bar .time { font-size: 16px; font-weight: 700; }
+  .status-icons { display: flex; gap: 6px; align-items: center; }
+  .signal-bars { display: flex; gap: 2px; align-items: flex-end; }
+  .signal-bars span { width: 3px; background: #fff; border-radius: 1px; }
+  .signal-bars span:nth-child(1) { height: 5px; }
+  .signal-bars span:nth-child(2) { height: 8px; }
+  .signal-bars span:nth-child(3) { height: 11px; }
+  .signal-bars span:nth-child(4) { height: 14px; }
+  .wifi-icon { font-size: 14px; }
+  .battery {
+    width: 25px; height: 13px;
+    border: 1.5px solid #fff;
+    border-radius: 3px;
+    position: relative;
+    display: flex; align-items: center; padding: 1px;
+  }
+  .battery::after {
+    content:''; position: absolute; right: -5px; top: 3px;
+    width: 3px; height: 6px;
+    background: #fff; border-radius: 0 1px 1px 0;
+  }
+  .battery-fill { width: 75%; height: 100%; background: #4cd964; border-radius: 1px; }
+
+  /* ── VIEWS ── */
+  .view {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+    border-radius: 52px;
+    overflow: hidden;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+  }
+  .view.active {
+    opacity: 1;
+    pointer-events: all;
+  }
+
+  /* ══════════════════════════════════
+     LOGIN VIEW
+  ══════════════════════════════════ */
+  #view-login {
+    background: linear-gradient(175deg, #cc2228 0%, #991a1e 40%, #6b1215 100%);
+  }
+  .login-bg-decor {
+    position: absolute; inset: 0;
+    background: radial-gradient(circle at 70% 20%, rgba(255,255,255,.08) 0%, transparent 50%);
+  }
+  .login-content {
+    position: relative;
+    z-index: 2;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 80px 36px 40px;
+    height: 100%;
+  }
+  .farmers-logo-wrap {
+    width: 120px; height: 120px;
+    background: #fff;
+    border-radius: 28px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 8px 32px rgba(0,0,0,.3);
+    margin-bottom: 24px;
+  }
+  .farmers-f {
+    font-size: 64px; font-weight: 900; color: #cc2228;
+    font-style: italic; line-height: 1;
+    font-family: Georgia, serif;
+  }
+  .login-title {
+    color: #fff; font-size: 26px; font-weight: 700;
+    margin-bottom: 6px;
+  }
+  .login-subtitle { color: rgba(255,255,255,.7); font-size: 14px; margin-bottom: 40px; }
+
+  .input-group { width: 100%; margin-bottom: 14px; position: relative; }
+  .input-group input {
+    width: 100%;
+    height: 52px;
+    background: rgba(255,255,255,.15);
+    border: 1.5px solid rgba(255,255,255,.3);
+    border-radius: 14px;
+    color: #fff;
+    font-size: 16px;
+    padding: 0 16px;
+    outline: none;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    transition: border-color .2s;
+  }
+  .input-group input::placeholder { color: rgba(255,255,255,.5); }
+  .input-group input:focus { border-color: rgba(255,255,255,.7); }
+
+  .btn-login {
+    width: 100%;
+    height: 54px;
+    background: #fff;
+    color: #cc2228;
+    font-size: 17px;
+    font-weight: 700;
+    border: none;
+    border-radius: 14px;
+    cursor: pointer;
+    margin-top: 8px;
+    transition: transform .1s, opacity .1s;
+    box-shadow: 0 4px 20px rgba(0,0,0,.2);
+  }
+  .btn-login:active { transform: scale(.98); opacity: .9; }
+
+  .login-links { margin-top: 20px; display: flex; gap: 24px; }
+  .login-links a { color: rgba(255,255,255,.7); font-size: 13px; text-decoration: none; }
+  .login-footer { margin-top: auto; color: rgba(255,255,255,.4); font-size: 11px; text-align: center; }
+
+  /* ══════════════════════════════════
+     HOME VIEW
+  ══════════════════════════════════ */
+  #view-home {
+    background: #f2f2f7;
+  }
+  .app-header {
+    background: #cc2228;
+    padding: 54px 20px 16px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .header-greeting { color: #fff; }
+  .header-greeting .name { font-size: 20px; font-weight: 700; }
+  .header-greeting .sub  { font-size: 13px; opacity: .8; }
+  .header-right { display: flex; gap: 12px; align-items: center; }
+  .avatar-btn {
+    width: 40px; height: 40px;
+    background: rgba(255,255,255,.2);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-weight: 700; font-size: 16px;
+    cursor: pointer; border: none;
+  }
+  .notif-btn {
+    width: 36px; height: 36px;
+    background: rgba(255,255,255,.15);
+    border-radius: 50%;
+    border: none; cursor: pointer;
+    color: #fff; font-size: 18px;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .scroll-content {
+    flex: 1; overflow-y: auto; padding: 0 16px 100px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .scroll-content::-webkit-scrollbar { display: none; }
+
+  /* Policy Card */
+  .policy-card {
+    background: linear-gradient(135deg, #cc2228 0%, #991a1e 100%);
+    border-radius: 20px;
+    padding: 20px;
+    margin: 16px 0 12px;
+    color: #fff;
+    box-shadow: 0 8px 24px rgba(204,34,40,.3);
+    cursor: pointer;
+    transition: transform .15s;
+  }
+  .policy-card:active { transform: scale(.98); }
+  .policy-card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
+  .policy-label { font-size: 12px; opacity: .75; text-transform: uppercase; letter-spacing: .5px; }
+  .policy-number { font-size: 17px; font-weight: 700; margin-top: 2px; }
+  .policy-badge {
+    background: #4cd964; color: #000;
+    font-size: 11px; font-weight: 700;
+    padding: 3px 10px; border-radius: 20px;
+  }
+  .policy-card-vehicle { display: flex; align-items: center; gap: 12px; }
+  .vehicle-icon {
+    width: 48px; height: 48px;
+    background: rgba(255,255,255,.15);
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 26px;
+  }
+  .vehicle-info .make { font-size: 18px; font-weight: 700; }
+  .vehicle-info .year-model { font-size: 13px; opacity: .8; }
+  .policy-card-footer {
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px solid rgba(255,255,255,.2);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .policy-card-footer .expiry { font-size: 12px; opacity: .7; }
+  .policy-card-footer .amount { font-size: 15px; font-weight: 700; }
+
+  /* Quick Actions */
+  .section-title {
+    font-size: 18px; font-weight: 700; color: #1c1c1e;
+    margin: 20px 0 12px;
+  }
+  .quick-actions {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 10px; margin-bottom: 20px;
+  }
+  .qa-btn {
+    background: #fff;
+    border-radius: 16px;
+    padding: 14px 8px;
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    border: none; cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0,0,0,.06);
+    transition: transform .15s;
+  }
+  .qa-btn:active { transform: scale(.95); }
+  .qa-icon {
+    width: 44px; height: 44px;
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+  }
+  .qa-label { font-size: 11px; color: #3c3c43; font-weight: 500; text-align: center; line-height: 1.2; }
+
+  /* Payment Card */
+  .info-card {
+    background: #fff;
+    border-radius: 20px;
+    padding: 18px;
+    margin-bottom: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.06);
+  }
+  .info-card-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 16px;
+  }
+  .info-card-header h3 { font-size: 16px; font-weight: 700; color: #1c1c1e; }
+  .info-card-header a { font-size: 14px; color: #cc2228; text-decoration: none; cursor: pointer; }
+  .payment-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid #f2f2f7;
+  }
+  .payment-row:last-child { border-bottom: none; }
+  .payment-row .pr-label { font-size: 14px; color: #3c3c43; }
+  .payment-row .pr-date { font-size: 12px; color: #8e8e93; margin-top: 2px; }
+  .payment-row .pr-amount { font-size: 16px; font-weight: 700; color: #1c1c1e; }
+  .payment-status {
+    display: inline-block;
+    font-size: 11px; font-weight: 600;
+    padding: 2px 8px; border-radius: 10px;
+    margin-top: 2px;
+  }
+  .status-paid { background: #d4edda; color: #1a7a35; }
+  .status-due   { background: #fff3cd; color: #856404; }
+  .status-auto  { background: #d1e8ff; color: #0052cc; }
+
+  /* Coverage summary */
+  .coverage-list { list-style: none; }
+  .coverage-list li {
+    display: flex; justify-content: space-between;
+    padding: 10px 0; border-bottom: 1px solid #f2f2f7;
+    font-size: 14px;
+  }
+  .coverage-list li:last-child { border-bottom: none; }
+  .coverage-list .cov-name { color: #3c3c43; }
+  .coverage-list .cov-val { color: #1c1c1e; font-weight: 600; }
+
+  /* Bottom Nav */
+  .bottom-nav {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    background: rgba(255,255,255,.95);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-top: 1px solid rgba(0,0,0,.1);
+    display: flex; justify-content: space-around;
+    padding: 10px 0 28px;
+    z-index: 50;
+  }
+  .nav-item {
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    background: none; border: none; cursor: pointer; min-width: 60px;
+  }
+  .nav-icon { font-size: 22px; }
+  .nav-label { font-size: 10px; color: #8e8e93; font-weight: 500; }
+  .nav-item.active .nav-icon { filter: none; }
+  .nav-item.active .nav-label { color: #cc2228; }
+
+  /* ══════════════════════════════════
+     POLICY VIEW
+  ══════════════════════════════════ */
+  #view-policy { background: #f2f2f7; }
+  #view-claims { background: #f2f2f7; }
+  #view-profile { background: #f2f2f7; }
+
+  .inner-header {
+    background: #cc2228;
+    padding: 54px 20px 16px;
+    color: #fff;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .back-btn {
+    background: rgba(255,255,255,.2);
+    border: none; border-radius: 50%;
+    width: 34px; height: 34px;
+    color: #fff; font-size: 18px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+  }
+  .inner-title { font-size: 20px; font-weight: 700; }
+
+  /* Vehicle detail card */
+  .vehicle-detail-card {
+    background: linear-gradient(135deg, #cc2228, #991a1e);
+    margin: 16px;
+    border-radius: 20px;
+    padding: 20px;
+    color: #fff;
+  }
+  .vd-header { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; }
+  .vd-icon { font-size: 52px; }
+  .vd-title { font-size: 22px; font-weight: 700; }
+  .vd-sub { font-size: 14px; opacity: .75; }
+  .vd-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .vd-stat { background: rgba(255,255,255,.15); border-radius: 12px; padding: 12px; text-align: center; }
+  .vd-stat-val { font-size: 15px; font-weight: 700; }
+  .vd-stat-label { font-size: 11px; opacity: .75; margin-top: 2px; }
+
+  /* ══════════════════════════════════
+     CLAIMS VIEW
+  ══════════════════════════════════ */
+  .claim-card {
+    background: #fff;
+    border-radius: 16px;
+    padding: 16px;
+    margin: 8px 16px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.06);
+    display: flex; gap: 14px; align-items: flex-start;
+    cursor: pointer;
+  }
+  .claim-status-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    flex-shrink: 0; margin-top: 5px;
+  }
+  .claim-title { font-size: 15px; font-weight: 600; color: #1c1c1e; }
+  .claim-sub { font-size: 13px; color: #8e8e93; margin-top: 2px; }
+  .claim-badge {
+    margin-left: auto;
+    font-size: 11px; font-weight: 600;
+    padding: 3px 10px; border-radius: 20px;
+  }
+  .new-claim-btn {
+    background: #cc2228; color: #fff;
+    border: none; border-radius: 16px;
+    width: calc(100% - 32px); margin: 12px 16px;
+    height: 52px; font-size: 16px; font-weight: 700;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+
+  /* ══════════════════════════════════
+     PROFILE VIEW
+  ══════════════════════════════════ */
+  .profile-hero {
+    background: #cc2228;
+    padding: 54px 20px 30px;
+    display: flex; flex-direction: column; align-items: center; gap: 12px;
+    color: #fff;
+  }
+  .profile-avatar {
+    width: 80px; height: 80px;
+    background: rgba(255,255,255,.25);
+    border-radius: 50%; border: 3px solid #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 34px; font-weight: 700; color: #fff;
+  }
+  .profile-name { font-size: 22px; font-weight: 700; }
+  .profile-email { font-size: 14px; opacity: .8; }
+  .profile-member { font-size: 12px; opacity: .7; margin-top: 4px; }
+
+  .profile-section {
+    background: #fff; margin: 12px 16px;
+    border-radius: 16px; overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,.06);
+  }
+  .profile-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 15px 16px;
+    border-bottom: 1px solid #f2f2f7;
+    cursor: pointer;
+  }
+  .profile-row:last-child { border-bottom: none; }
+  .profile-row-left { display: flex; align-items: center; gap: 12px; }
+  .profile-row-icon {
+    width: 34px; height: 34px;
+    border-radius: 9px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 17px;
+  }
+  .profile-row-label { font-size: 15px; color: #1c1c1e; }
+  .profile-row-chevron { color: #c7c7cc; font-size: 14px; }
+
+  .logout-btn {
+    background: #fff; color: #cc2228;
+    border: 1.5px solid #cc2228;
+    border-radius: 14px;
+    width: calc(100% - 32px); margin: 8px 16px;
+    height: 50px; font-size: 16px; font-weight: 700;
+    cursor: pointer;
+  }
+
+  /* ══════════════════════════════════
+     CHAT VIEW
+  ══════════════════════════════════ */
+  #view-chat { background: #f2f2f7; }
+  .chat-header {
+    background: #cc2228;
+    padding: 54px 20px 16px;
+    color: #fff;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .agent-info { flex: 1; }
+  .agent-name { font-size: 17px; font-weight: 700; }
+  .agent-status { font-size: 12px; opacity: .8; display: flex; align-items: center; gap: 5px; }
+  .online-dot { width: 7px; height: 7px; background: #4cd964; border-radius: 50%; display: inline-block; }
+
+  .chat-messages {
+    flex: 1; overflow-y: auto; padding: 16px;
+    display: flex; flex-direction: column; gap: 12px;
+    padding-bottom: 80px;
+  }
+  .chat-messages::-webkit-scrollbar { display: none; }
+
+  .msg-bubble {
+    max-width: 78%;
+    border-radius: 18px;
+    padding: 10px 14px;
+    font-size: 15px; line-height: 1.4;
+  }
+  .msg-bubble.agent {
+    background: #fff;
+    color: #1c1c1e;
+    align-self: flex-start;
+    border-bottom-left-radius: 4px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.1);
+  }
+  .msg-bubble.user {
+    background: #cc2228;
+    color: #fff;
+    align-self: flex-end;
+    border-bottom-right-radius: 4px;
+  }
+  .msg-time { font-size: 11px; color: #8e8e93; margin-top: 3px; }
+  .msg-time.right { text-align: right; }
+
+  .typing-indicator {
+    display: flex; gap: 4px; align-items: center;
+    background: #fff; padding: 12px 16px;
+    border-radius: 18px; border-bottom-left-radius: 4px;
+    width: fit-content;
+    box-shadow: 0 1px 4px rgba(0,0,0,.1);
+  }
+  .typing-dot {
+    width: 7px; height: 7px; background: #8e8e93;
+    border-radius: 50%; animation: bounce 1.2s infinite;
+  }
+  .typing-dot:nth-child(2) { animation-delay: .2s; }
+  .typing-dot:nth-child(3) { animation-delay: .4s; }
+  @keyframes bounce {
+    0%, 60%, 100% { transform: translateY(0); }
+    30% { transform: translateY(-5px); }
+  }
+  @keyframes chatSlideUp {
+    from { opacity:0; transform: translateY(20px); }
+    to   { opacity:1; transform: translateY(0); }
+  }
+  @keyframes typingDot {
+    0%, 60%, 100% { transform: translateY(0); opacity:.4; }
+    30% { transform: translateY(-5px); opacity:1; }
+  }
+
+  .chat-input-bar {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    background: rgba(255,255,255,.95);
+    backdrop-filter: blur(20px);
+    padding: 10px 16px 30px;
+    display: flex; gap: 10px; align-items: center;
+    border-top: 1px solid rgba(0,0,0,.08);
+    z-index: 50;
+  }
+  .chat-input {
+    flex: 1; background: #f2f2f7;
+    border: none; border-radius: 22px;
+    padding: 10px 16px; font-size: 15px;
+    outline: none; font-family: inherit;
+    max-height: 100px;
+  }
+  .chat-send-btn {
+    width: 38px; height: 38px;
+    background: #cc2228; color: #fff;
+    border: none; border-radius: 50%;
+    font-size: 17px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    transition: transform .1s;
+  }
+  .chat-send-btn:active { transform: scale(.9); }
+
+  /* Cisco banner on chat */
+  .cisco-badge {
+    text-align: center;
+    font-size: 11px; color: #8e8e93;
+    padding: 8px 0;
+    display: flex; align-items: center; justify-content: center; gap: 5px;
+  }
+  .cisco-badge .cisco-dot {
+    width: 16px; height: 16px;
+    background: #049fd9;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 9px; color: #fff; font-weight: 700;
+  }
+
+  /* ══════════════════════════════════
+     MODAL — ID CARD
+  ══════════════════════════════════ */
+  .modal-overlay {
+    position: absolute; inset: 0;
+    background: rgba(0,0,0,.5);
+    display: flex; align-items: flex-end;
+    z-index: 200;
+    opacity: 0; pointer-events: none;
+    transition: opacity .25s;
+    border-radius: 52px;
+  }
+  .modal-overlay.open { opacity: 1; pointer-events: all; }
+  .modal-sheet {
+    background: #fff;
+    border-radius: 24px 24px 0 0;
+    padding: 0 0 40px;
+    width: 100%;
+    transform: translateY(100%);
+    transition: transform .3s cubic-bezier(.4,0,.2,1);
+  }
+  .modal-overlay.open .modal-sheet { transform: translateY(0); }
+  .modal-handle {
+    width: 40px; height: 4px; background: #c7c7cc;
+    border-radius: 2px; margin: 12px auto 20px;
+  }
+  .modal-title {
+    font-size: 20px; font-weight: 700; text-align: center;
+    padding: 0 20px 16px; color: #1c1c1e;
+  }
+
+  /* ID Card */
+  .id-card {
+    background: linear-gradient(135deg, #cc2228 0%, #7a1215 100%);
+    margin: 0 20px 20px;
+    border-radius: 20px;
+    padding: 20px;
+    color: #fff;
+    box-shadow: 0 8px 24px rgba(204,34,40,.3);
+  }
+  .id-card-header {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    margin-bottom: 18px;
+  }
+  .id-card-logo { font-size: 26px; font-weight: 900; font-style: italic; font-family: Georgia, serif; }
+  .id-card-type { font-size: 12px; opacity: .7; text-transform: uppercase; letter-spacing: 1px; }
+  .id-card-body { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .id-field-label { font-size: 11px; opacity: .7; text-transform: uppercase; letter-spacing: .5px; }
+  .id-field-value { font-size: 14px; font-weight: 600; margin-top: 2px; }
+  .id-card-footer {
+    margin-top: 18px; padding-top: 14px;
+    border-top: 1px solid rgba(255,255,255,.2);
+    font-size: 11px; opacity: .7;
+    text-align: center;
+  }
+
+  /* ══════════════════════════════════
+     PAYMENT VIEW (slide-over)
+  ══════════════════════════════════ */
+  #view-payment { background: #f2f2f7; }
+  .payment-detail-card {
+    background: #fff; margin: 12px 16px;
+    border-radius: 16px; padding: 18px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.06);
+  }
+  .pay-row {
+    display: flex; justify-content: space-between;
+    padding: 10px 0; border-bottom: 1px solid #f2f2f7;
+    font-size: 14px;
+  }
+  .pay-row:last-child { border-bottom: none; }
+  .pay-row .label { color: #8e8e93; }
+  .pay-row .value { color: #1c1c1e; font-weight: 600; }
+
+  .pay-now-btn {
+    background: #cc2228; color: #fff;
+    border: none; border-radius: 14px;
+    width: calc(100% - 32px); margin: 0 16px;
+    height: 54px; font-size: 17px; font-weight: 700;
+    cursor: pointer; display: flex; align-items: center;
+    justify-content: center; gap: 8px;
+    box-shadow: 0 4px 16px rgba(204,34,40,.3);
+  }
+  .autopay-toggle {
+    background: #fff; margin: 8px 16px;
+    border-radius: 16px; padding: 16px 18px;
+    display: flex; align-items: center; justify-content: space-between;
+    box-shadow: 0 2px 8px rgba(0,0,0,.06);
+  }
+  .toggle-label { font-size: 15px; font-weight: 600; color: #1c1c1e; }
+  .toggle-sub { font-size: 12px; color: #8e8e93; margin-top: 2px; }
+  .toggle-switch {
+    width: 51px; height: 31px;
+    background: #4cd964;
+    border-radius: 16px; position: relative;
+    cursor: pointer; transition: background .2s;
+  }
+  .toggle-switch::after {
+    content: '';
+    position: absolute; top: 3px; right: 3px;
+    width: 25px; height: 25px;
+    background: #fff; border-radius: 50%;
+    box-shadow: 0 2px 5px rgba(0,0,0,.2);
+    transition: right .2s;
+  }
+  .toggle-switch.off { background: #e5e5ea; }
+  .toggle-switch.off::after { right: auto; left: 3px; }
+
+  /* Toast */
+  .toast {
+    position: absolute; bottom: 90px; left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: rgba(28,28,30,.9);
+    color: #fff; font-size: 14px; font-weight: 500;
+    padding: 12px 20px; border-radius: 14px;
+    white-space: nowrap;
+    opacity: 0; pointer-events: none;
+    transition: opacity .25s, transform .25s;
+    z-index: 300;
+  }
+  .toast.show {
+    opacity: 1; transform: translateX(-50%) translateY(0);
+  }
+
+  /* Responsive: on small screens show without phone shell */
+  @media (max-width: 440px) {
+    body { background: #f2f2f7; align-items: flex-start; }
+    .iphone-shell {
+      width: 100vw; height: 100vh;
+      border-radius: 0;
+      box-shadow: none;
+    }
+    .screen, .view { border-radius: 0; }
+    .modal-overlay { border-radius: 0; }
+    .dynamic-island { top: 6px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════
+     iPhone Shell
+════════════════════════════════════ -->
+<div class="iphone-shell">
+  <div class="btn-side-vol-up"></div>
+  <div class="btn-side-vol-down"></div>
+  <div class="btn-side-power"></div>
+
+  <div class="screen">
+    <!-- Dynamic Island -->
+    <div class="dynamic-island">
+      <div class="di-dot"></div>
+      <div class="di-camera"></div>
+    </div>
+
+    <!-- Status Bar (visible on top of every colored header) -->
+    <div class="status-bar" id="statusBar">
+      <span class="time" id="clockDisplay">9:41</span>
+      <div class="status-icons">
+        <div class="signal-bars">
+          <span></span><span></span><span></span><span></span>
+        </div>
+        <span class="wifi-icon">&#x1F4F6;</span>
+        <div class="battery"><div class="battery-fill"></div></div>
+      </div>
+    </div>
+
+    <!-- ══════════ LOGIN ══════════ -->
+    <div class="view active" id="view-login">
+      <div class="login-bg-decor"></div>
+      <div class="login-content">
+        <div class="farmers-logo-wrap">
+          <span class="farmers-f">F</span>
+        </div>
+        <div class="login-title">Farmers Insurance</div>
+        <div class="login-subtitle">Sign in to manage your policy</div>
+
+        <div class="input-group">
+          <input type="text" id="loginUser" placeholder="Username or Email" autocomplete="off">
+        </div>
+        <div class="input-group">
+          <input type="password" id="loginPass" placeholder="Password" autocomplete="off">
+        </div>
+        <button class="btn-login" onclick="doLogin()">Sign In</button>
+
+        <div class="login-links">
+          <a href="#">Forgot Password?</a>
+          <a href="#">Create Account</a>
+        </div>
+        <div class="login-footer">© 2024 Farmers Insurance Group of Companies<br>Secure login powered by Cisco Webex</div>
+      </div>
+    </div>
+
+    <!-- ══════════ HOME ══════════ -->
+    <div class="view" id="view-home">
+      <div class="app-header">
+        <div class="header-greeting">
+          <div class="name">Hi, Ed 👋</div>
+          <div class="sub">Welcome back</div>
+        </div>
+        <div class="header-right">
+          <button class="notif-btn" onclick="showToast('No new notifications')">🔔</button>
+          <button class="avatar-btn" onclick="navigateTo('profile')">EV</button>
+        </div>
+      </div>
+
+      <div class="scroll-content">
+        <!-- Policy Card -->
+        <div class="policy-card" onclick="navigateTo('policy')">
+          <div class="policy-card-top">
+            <div>
+              <div class="policy-label">Auto Policy</div>
+              <div class="policy-number">#TX-8842-2190-A</div>
+            </div>
+            <span class="policy-badge">ACTIVE</span>
+          </div>
+          <div class="policy-card-vehicle">
+            <div class="vehicle-icon">🚗</div>
+            <div class="vehicle-info">
+              <div class="make">Toyota Camry</div>
+              <div class="year-model">2019 · LE · VIN: 4T1B11HK5KU235871</div>
+            </div>
+          </div>
+          <div class="policy-card-footer">
+            <div>
+              <div class="expiry">Policy expires</div>
+              <div style="color:#fff;font-size:13px;font-weight:600;">Nov 14, 2025</div>
+            </div>
+            <div>
+              <div class="expiry">6-month premium</div>
+              <div class="amount">$742.00</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="section-title">Quick Actions</div>
+        <div class="quick-actions">
+          <button class="qa-btn" onclick="navigateTo('payment')">
+            <div class="qa-icon" style="background:#fff0f0;">💳</div>
+            <span class="qa-label">Pay Bill</span>
+          </button>
+          <button class="qa-btn" onclick="navigateTo('claims')">
+            <div class="qa-icon" style="background:#fff8e6;">📋</div>
+            <span class="qa-label">File Claim</span>
+          </button>
+          <button class="qa-btn" onclick="showIDCard()">
+            <div class="qa-icon" style="background:#e8f5e9;">🪪</div>
+            <span class="qa-label">ID Card</span>
+          </button>
+          <button class="qa-btn" onclick="navigateTo('chat')">
+            <div class="qa-icon" style="background:#e8f0fe;">💬</div>
+            <span class="qa-label">Live Chat</span>
+          </button>
+        </div>
+
+        <!-- Payment Summary -->
+        <div class="info-card">
+          <div class="info-card-header">
+            <h3>Payments</h3>
+            <a onclick="navigateTo('payment')">View All</a>
+          </div>
+          <div class="payment-row">
+            <div>
+              <div class="pr-label">Next Payment Due</div>
+              <div class="pr-date">Due July 14, 2025</div>
+              <span class="payment-status status-due">DUE IN 21 DAYS</span>
+            </div>
+            <div class="pr-amount">$123.67</div>
+          </div>
+          <div class="payment-row">
+            <div>
+              <div class="pr-label">Last Payment</div>
+              <div class="pr-date">June 14, 2025</div>
+              <span class="payment-status status-paid">PAID</span>
+            </div>
+            <div class="pr-amount">$123.67</div>
+          </div>
+          <div class="payment-row">
+            <div>
+              <div class="pr-label">AutoPay</div>
+              <div class="pr-date">Visa ···· 4291</div>
+              <span class="payment-status status-auto">ENROLLED</span>
+            </div>
+            <div style="color:#4cd964;font-size:22px;">✓</div>
+          </div>
+        </div>
+
+        <!-- Coverage -->
+        <div class="info-card">
+          <div class="info-card-header">
+            <h3>Coverage Summary</h3>
+            <a onclick="navigateTo('policy')">Details</a>
+          </div>
+          <ul class="coverage-list">
+            <li><span class="cov-name">Bodily Injury Liability</span><span class="cov-val">$100K / $300K</span></li>
+            <li><span class="cov-name">Property Damage</span><span class="cov-val">$100,000</span></li>
+            <li><span class="cov-name">Comprehensive</span><span class="cov-val">$500 Deductible</span></li>
+            <li><span class="cov-name">Collision</span><span class="cov-val">$500 Deductible</span></li>
+            <li><span class="cov-name">Uninsured Motorist</span><span class="cov-val">$100K / $300K</span></li>
+            <li><span class="cov-name">Roadside Assistance</span><span class="cov-val">Included</span></li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Bottom Nav -->
+      <div class="bottom-nav">
+        <button class="nav-item active" onclick="navigateTo('home')">
+          <span class="nav-icon">🏠</span>
+          <span class="nav-label" style="color:#cc2228;">Home</span>
+        </button>
+        <button class="nav-item" onclick="navigateTo('policy')">
+          <span class="nav-icon">📄</span>
+          <span class="nav-label">Policy</span>
+        </button>
+        <button class="nav-item" onclick="navigateTo('claims')">
+          <span class="nav-icon">🔧</span>
+          <span class="nav-label">Claims</span>
+        </button>
+        <button class="nav-item" onclick="navigateTo('payment')">
+          <span class="nav-icon">💳</span>
+          <span class="nav-label">Payments</span>
+        </button>
+        <button class="nav-item" onclick="navigateTo('chat')">
+          <span class="nav-icon">💬</span>
+          <span class="nav-label">Chat</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- ══════════ POLICY ══════════ -->
+    <div class="view" id="view-policy">
+      <div class="inner-header">
+        <button class="back-btn" onclick="navigateTo('home')">‹</button>
+        <span class="inner-title">My Policy</span>
+      </div>
+      <div class="scroll-content" style="padding-top:8px;">
+        <div class="vehicle-detail-card">
+          <div class="vd-header">
+            <span class="vd-icon">🚗</span>
+            <div>
+              <div class="vd-title">2019 Toyota Camry</div>
+              <div class="vd-sub">LE · Pearl White · 4-door Sedan</div>
+            </div>
+          </div>
+          <div class="vd-stats">
+            <div class="vd-stat">
+              <div class="vd-stat-val">ACTIVE</div>
+              <div class="vd-stat-label">Status</div>
+            </div>
+            <div class="vd-stat">
+              <div class="vd-stat-val">11/14/25</div>
+              <div class="vd-stat-label">Expires</div>
+            </div>
+            <div class="vd-stat">
+              <div class="vd-stat-val">$742</div>
+              <div class="vd-stat-label">6-Mo. Premium</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="info-card" style="margin:0 0 12px;">
+          <div class="info-card-header"><h3>Policy Details</h3></div>
+          <ul class="coverage-list">
+            <li><span class="cov-name">Policy Number</span><span class="cov-val">#TX-8842-2190-A</span></li>
+            <li><span class="cov-name">Policy Holder</span><span class="cov-val">Ed Villarreal</span></li>
+            <li><span class="cov-name">Address</span><span class="cov-val">San Antonio, TX</span></li>
+            <li><span class="cov-name">Effective Date</span><span class="cov-val">May 14, 2025</span></li>
+            <li><span class="cov-name">Expiration Date</span><span class="cov-val">Nov 14, 2025</span></li>
+            <li><span class="cov-name">VIN</span><span class="cov-val" style="font-size:12px;">4T1B11HK5KU235871</span></li>
+            <li><span class="cov-name">Year / Make</span><span class="cov-val">2019 Toyota</span></li>
+            <li><span class="cov-name">Model / Trim</span><span class="cov-val">Camry LE</span></li>
+          </ul>
+        </div>
+
+        <div class="info-card" style="margin:0 0 12px;">
+          <div class="info-card-header"><h3>Coverage Details</h3></div>
+          <ul class="coverage-list">
+            <li><span class="cov-name">Bodily Injury</span><span class="cov-val">$100K / $300K</span></li>
+            <li><span class="cov-name">Property Damage</span><span class="cov-val">$100,000</span></li>
+            <li><span class="cov-name">Medical Payments</span><span class="cov-val">$5,000</span></li>
+            <li><span class="cov-name">Comprehensive</span><span class="cov-val">$500 Ded.</span></li>
+            <li><span class="cov-name">Collision</span><span class="cov-val">$500 Ded.</span></li>
+            <li><span class="cov-name">UM / UIM</span><span class="cov-val">$100K / $300K</span></li>
+            <li><span class="cov-name">Rental Reimbursement</span><span class="cov-val">$40/day · $1,200 max</span></li>
+            <li><span class="cov-name">Roadside Assistance</span><span class="cov-val">24 / 7 Included</span></li>
+            <li><span class="cov-name">Rideshare Coverage</span><span class="cov-val">Added</span></li>
+          </ul>
+        </div>
+        <div style="height:80px;"></div>
+      </div>
+      <div class="bottom-nav">
+        <button class="nav-item" onclick="navigateTo('home')"><span class="nav-icon">🏠</span><span class="nav-label">Home</span></button>
+        <button class="nav-item active" onclick="navigateTo('policy')"><span class="nav-icon">📄</span><span class="nav-label" style="color:#cc2228;">Policy</span></button>
+        <button class="nav-item" onclick="navigateTo('claims')"><span class="nav-icon">🔧</span><span class="nav-label">Claims</span></button>
+        <button class="nav-item" onclick="navigateTo('payment')"><span class="nav-icon">💳</span><span class="nav-label">Payments</span></button>
+        <button class="nav-item" onclick="navigateTo('chat')"><span class="nav-icon">💬</span><span class="nav-label">Chat</span></button>
+      </div>
+    </div>
+
+    <!-- ══════════ CLAIMS ══════════ -->
+    <div class="view" id="view-claims">
+      <div class="inner-header">
+        <button class="back-btn" onclick="navigateTo('home')">‹</button>
+        <span class="inner-title">Claims</span>
+      </div>
+      <div class="scroll-content" style="padding-top:12px;padding-left:0;padding-right:0;">
+        <button class="new-claim-btn">
+          <span>+</span> File a New Claim
+        </button>
+
+        <div style="padding:0 16px;margin-top:16px;">
+          <div class="section-title" style="margin-top:0;">Recent Claims</div>
+        </div>
+
+        <div class="claim-card">
+          <div class="claim-status-dot" style="background:#ff9500;"></div>
+          <div style="flex:1;">
+            <div class="claim-title">Minor Collision — Rear Bumper</div>
+            <div class="claim-sub">Claim #2024-TX-88119 · Filed Jun 2, 2024</div>
+            <div class="claim-sub" style="margin-top:4px;">Repair estimate: $1,840</div>
+          </div>
+          <div>
+            <span class="claim-badge" style="background:#fff3cd;color:#856404;">In Review</span>
+          </div>
+        </div>
+
+        <div class="claim-card">
+          <div class="claim-status-dot" style="background:#4cd964;"></div>
+          <div style="flex:1;">
+            <div class="claim-title">Windshield Crack — Comprehensive</div>
+            <div class="claim-sub">Claim #2023-TX-55442 · Filed Nov 8, 2023</div>
+            <div class="claim-sub" style="margin-top:4px;">Paid: $380</div>
+          </div>
+          <div>
+            <span class="claim-badge" style="background:#d4edda;color:#1a7a35;">Closed</span>
+          </div>
+        </div>
+
+        <div class="claim-card">
+          <div class="claim-status-dot" style="background:#4cd964;"></div>
+          <div style="flex:1;">
+            <div class="claim-title">Hail Damage — Roof &amp; Hood</div>
+            <div class="claim-sub">Claim #2022-TX-30918 · Filed Apr 22, 2022</div>
+            <div class="claim-sub" style="margin-top:4px;">Paid: $2,650</div>
+          </div>
+          <div>
+            <span class="claim-badge" style="background:#d4edda;color:#1a7a35;">Closed</span>
+          </div>
+        </div>
+
+        <div style="padding:16px;">
+          <div class="info-card">
+            <div class="info-card-header"><h3>Need Help with a Claim?</h3></div>
+            <p style="font-size:14px;color:#3c3c43;line-height:1.5;margin-bottom:14px;">
+              Our claims specialists are available 24/7 to assist you through the claims process.
+            </p>
+            <button onclick="navigateTo('chat')" style="background:#cc2228;color:#fff;border:none;border-radius:12px;width:100%;height:44px;font-size:15px;font-weight:600;cursor:pointer;">
+              Chat with Claims Support
+            </button>
+          </div>
+        </div>
+        <div style="height:80px;"></div>
+      </div>
+      <div class="bottom-nav">
+        <button class="nav-item" onclick="navigateTo('home')"><span class="nav-icon">🏠</span><span class="nav-label">Home</span></button>
+        <button class="nav-item" onclick="navigateTo('policy')"><span class="nav-icon">📄</span><span class="nav-label">Policy</span></button>
+        <button class="nav-item active" onclick="navigateTo('claims')"><span class="nav-icon">🔧</span><span class="nav-label" style="color:#cc2228;">Claims</span></button>
+        <button class="nav-item" onclick="navigateTo('payment')"><span class="nav-icon">💳</span><span class="nav-label">Payments</span></button>
+        <button class="nav-item" onclick="navigateTo('chat')"><span class="nav-icon">💬</span><span class="nav-label">Chat</span></button>
+      </div>
+    </div>
+
+    <!-- ══════════ PAYMENT ══════════ -->
+    <div class="view" id="view-payment">
+      <div class="inner-header">
+        <button class="back-btn" onclick="navigateTo('home')">‹</button>
+        <span class="inner-title">Payments</span>
+      </div>
+      <div class="scroll-content" style="padding-top:12px;">
+
+        <!-- Next due banner -->
+        <div style="background:linear-gradient(135deg,#cc2228,#991a1e);border-radius:20px;padding:20px;color:#fff;margin-bottom:12px;box-shadow:0 6px 20px rgba(204,34,40,.25);">
+          <div style="font-size:12px;opacity:.8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Amount Due</div>
+          <div style="font-size:36px;font-weight:800;margin-bottom:4px;">$123.67</div>
+          <div style="font-size:14px;opacity:.8;">Due July 14, 2025 · AutoPay enrolled</div>
+        </div>
+
+        <button class="pay-now-btn" onclick="handlePayNow()">
+          💳 Pay Now
+        </button>
+
+        <div class="autopay-toggle" style="margin-top:12px;">
+          <div>
+            <div class="toggle-label">AutoPay</div>
+            <div class="toggle-sub">Visa ending in 4291</div>
+          </div>
+          <div class="toggle-switch" id="autopayToggle" onclick="toggleAutopay()"></div>
+        </div>
+
+        <div class="payment-detail-card" style="margin-top:12px;">
+          <div class="info-card-header"><h3>Payment Schedule</h3></div>
+          <div class="pay-row"><span class="label">Jul 14, 2025</span><span class="value" style="color:#ff9500;">$123.67 (upcoming)</span></div>
+          <div class="pay-row"><span class="label">Jun 14, 2025</span><span class="value" style="color:#4cd964;">$123.67 ✓ Paid</span></div>
+          <div class="pay-row"><span class="label">May 14, 2025</span><span class="value" style="color:#4cd964;">$123.67 ✓ Paid</span></div>
+          <div class="pay-row"><span class="label">Apr 14, 2025</span><span class="value" style="color:#4cd964;">$123.67 ✓ Paid</span></div>
+          <div class="pay-row"><span class="label">Mar 14, 2025</span><span class="value" style="color:#4cd964;">$123.67 ✓ Paid</span></div>
+          <div class="pay-row"><span class="label">Feb 14, 2025</span><span class="value" style="color:#4cd964;">$123.67 ✓ Paid</span></div>
+        </div>
+
+        <div class="payment-detail-card">
+          <div class="info-card-header"><h3>Premium Breakdown</h3></div>
+          <div class="pay-row"><span class="label">Bodily Injury / PD</span><span class="value">$48.22</span></div>
+          <div class="pay-row"><span class="label">Comprehensive</span><span class="value">$18.40</span></div>
+          <div class="pay-row"><span class="label">Collision</span><span class="value">$39.15</span></div>
+          <div class="pay-row"><span class="label">UM / UIM</span><span class="value">$10.05</span></div>
+          <div class="pay-row"><span class="label">Roadside / Rental</span><span class="value">$5.85</span></div>
+          <div class="pay-row"><span class="label">State Fees &amp; Taxes</span><span class="value">$2.00</span></div>
+          <div class="pay-row" style="font-weight:700;"><span class="label" style="color:#1c1c1e;font-weight:700;">Total / Month</span><span class="value">$123.67</span></div>
+        </div>
+        <div style="height:80px;"></div>
+      </div>
+      <div class="bottom-nav">
+        <button class="nav-item" onclick="navigateTo('home')"><span class="nav-icon">🏠</span><span class="nav-label">Home</span></button>
+        <button class="nav-item" onclick="navigateTo('policy')"><span class="nav-icon">📄</span><span class="nav-label">Policy</span></button>
+        <button class="nav-item" onclick="navigateTo('claims')"><span class="nav-icon">🔧</span><span class="nav-label">Claims</span></button>
+        <button class="nav-item active" onclick="navigateTo('payment')"><span class="nav-icon">💳</span><span class="nav-label" style="color:#cc2228;">Payments</span></button>
+        <button class="nav-item" onclick="navigateTo('chat')"><span class="nav-icon">💬</span><span class="nav-label">Chat</span></button>
+      </div>
+    </div>
+
+    <!-- ══════════ CHAT ══════════ -->
+    <div class="view" id="view-chat">
+      <div class="chat-header">
+        <button class="back-btn" onclick="exitChat()">‹</button>
+        <div class="agent-info">
+          <div class="agent-name">Farmers Support</div>
+          <div class="agent-status" id="chatStatus">
+            <span class="online-dot" id="chatStatusDot"></span>
+            <span id="chatStatusText">Live · Cisco Webex Contact Center</span>
+          </div>
+        </div>
+        <div style="width:36px;height:36px;background:rgba(255,255,255,.2);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;">💬</div>
+      </div>
+
+      <!-- Pre-chat: shown before starting a conversation -->
+      <div id="chat-prechat" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 24px;gap:16px;text-align:center;">
+        <div style="width:80px;height:80px;background:linear-gradient(135deg,#049fd9,#005cde);border-radius:24px;display:flex;align-items:center;justify-content:center;font-size:38px;box-shadow:0 8px 24px rgba(4,159,217,.3);">💬</div>
+        <div>
+          <div style="font-size:20px;font-weight:700;color:#1c1c1e;margin-bottom:6px;">Live Chat Support</div>
+          <div style="font-size:14px;color:#8e8e93;line-height:1.5;">Connect with a Farmers specialist now.</div>
+        </div>
+        <div style="width:100%;text-align:left;">
+          <label style="font-size:13px;font-weight:600;color:#1c1c1e;display:block;margin-bottom:4px;">Name</label>
+          <input id="prechatName" type="text" value="Ed Villarreal" style="width:100%;padding:12px 14px;border:1px solid #d1d1d6;border-radius:12px;font-size:15px;background:#f9f9f9;box-sizing:border-box;outline:none;" />
+        </div>
+        <div style="width:100%;text-align:left;">
+          <label style="font-size:13px;font-weight:600;color:#1c1c1e;display:block;margin-bottom:4px;">Email</label>
+          <input id="prechatEmail" type="email" value="ed.villarreal@farmers.com" style="width:100%;padding:12px 14px;border:1px solid #d1d1d6;border-radius:12px;font-size:15px;background:#f9f9f9;box-sizing:border-box;outline:none;" />
+        </div>
+        <button onclick="launchWebexChat()" id="startChatBtn" style="background:linear-gradient(135deg,#049fd9,#005cde);color:#fff;border:none;border-radius:16px;width:100%;height:54px;font-size:17px;font-weight:700;cursor:pointer;box-shadow:0 4px 16px rgba(4,159,217,.35);display:flex;align-items:center;justify-content:center;gap:8px;margin-top:4px;">
+          Start Live Chat
+        </button>
+        <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:#8e8e93;">
+          <div style="width:18px;height:18px;background:#049fd9;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff;font-weight:700;">C</div>
+          Powered by Cisco Webex Contact Center
+        </div>
+        <div style="background:#f2f2f7;border-radius:16px;padding:16px;width:100%;text-align:left;">
+          <div style="font-size:13px;font-weight:600;color:#1c1c1e;margin-bottom:10px;">Other ways to reach us</div>
+          <div onclick="showToast('Calling 1-800-435-7764...')" style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #e5e5ea;cursor:pointer;">
+            <span style="font-size:20px;">📞</span>
+            <div>
+              <div style="font-size:14px;font-weight:600;color:#1c1c1e;">1-800-435-7764</div>
+              <div style="font-size:12px;color:#8e8e93;">24/7 Claims & Service</div>
+            </div>
+          </div>
+          <div onclick="showToast('Opening email...')" style="display:flex;align-items:center;gap:10px;padding:8px 0;cursor:pointer;">
+            <span style="font-size:20px;">✉️</span>
+            <div>
+              <div style="font-size:14px;font-weight:600;color:#1c1c1e;">Send a Message</div>
+              <div style="font-size:12px;color:#8e8e93;">Response within 24 hours</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Active chat: IMI widget in iframe, styled to fill the chat area -->
+      <div id="chat-active" style="display:none;flex:1;position:relative;overflow:hidden;">
+        <iframe id="chatWidgetFrame"
+          style="width:100%;height:100%;border:none;background:#f2f2f7;"
+          allow="microphone;camera">
+        </iframe>
+      </div>
+    </div>
+
+    <!-- ══════════ PROFILE ══════════ -->
+    <div class="view" id="view-profile">
+      <div class="profile-hero">
+        <div class="dynamic-island" style="position:relative;top:auto;left:auto;transform:none;width:100px;height:28px;margin-bottom:8px;"></div>
+        <div class="profile-avatar">EV</div>
+        <div class="profile-name">Ed Villarreal</div>
+        <div class="profile-email">ed.villarreal@email.com</div>
+        <div class="profile-member">Member since 2019 · Policy #TX-8842-2190-A</div>
+      </div>
+      <div class="scroll-content" style="padding-top:12px;">
+        <div class="profile-section">
+          <div class="profile-row" onclick="showToast('Personal info updated')">
+            <div class="profile-row-left">
+              <div class="profile-row-icon" style="background:#fff0f0;">👤</div>
+              <span class="profile-row-label">Personal Information</span>
+            </div>
+            <span class="profile-row-chevron">›</span>
+          </div>
+          <div class="profile-row" onclick="showToast('Notifications configured')">
+            <div class="profile-row-left">
+              <div class="profile-row-icon" style="background:#e8f0fe;">🔔</div>
+              <span class="profile-row-label">Notifications</span>
+            </div>
+            <span class="profile-row-chevron">›</span>
+          </div>
+          <div class="profile-row" onclick="showToast('Documents downloaded')">
+            <div class="profile-row-left">
+              <div class="profile-row-icon" style="background:#e8f5e9;">📄</div>
+              <span class="profile-row-label">Documents &amp; ID Cards</span>
+            </div>
+            <span class="profile-row-chevron">›</span>
+          </div>
+          <div class="profile-row" onclick="showToast('Roadside requested')">
+            <div class="profile-row-left">
+              <div class="profile-row-icon" style="background:#fff8e6;">🚨</div>
+              <span class="profile-row-label">Request Roadside Assistance</span>
+            </div>
+            <span class="profile-row-chevron">›</span>
+          </div>
+        </div>
+
+        <div class="profile-section">
+          <div class="profile-row" onclick="showToast('Agent: Mike Torres · (210) 555-0198')">
+            <div class="profile-row-left">
+              <div class="profile-row-icon" style="background:#f3e8ff;">👨‍💼</div>
+              <span class="profile-row-label">My Agent — Mike Torres</span>
+            </div>
+            <span class="profile-row-chevron">›</span>
+          </div>
+          <div class="profile-row" onclick="navigateTo('chat')">
+            <div class="profile-row-left">
+              <div class="profile-row-icon" style="background:#e8f0fe;">💬</div>
+              <span class="profile-row-label">Live Chat Support</span>
+            </div>
+            <span class="profile-row-chevron">›</span>
+          </div>
+          <div class="profile-row" onclick="showToast('Calling 1-800-435-7764...')">
+            <div class="profile-row-left">
+              <div class="profile-row-icon" style="background:#e8f5e9;">📞</div>
+              <span class="profile-row-label">Call Farmers — 1-800-435-7764</span>
+            </div>
+            <span class="profile-row-chevron">›</span>
+          </div>
+        </div>
+
+        <div class="profile-section">
+          <div class="profile-row" onclick="showToast('Privacy settings')">
+            <div class="profile-row-left">
+              <div class="profile-row-icon" style="background:#f2f2f7;">🔒</div>
+              <span class="profile-row-label">Security &amp; Privacy</span>
+            </div>
+            <span class="profile-row-chevron">›</span>
+          </div>
+          <div class="profile-row" onclick="showToast('App version 12.4.1 (Demo)')">
+            <div class="profile-row-left">
+              <div class="profile-row-icon" style="background:#f2f2f7;">ℹ️</div>
+              <span class="profile-row-label">About &amp; App Version</span>
+            </div>
+            <span class="profile-row-chevron">›</span>
+          </div>
+        </div>
+
+        <button class="logout-btn" onclick="doLogout()">Sign Out</button>
+        <div style="height:20px;"></div>
+      </div>
+    </div>
+
+    <!-- ══════════ ID CARD MODAL ══════════ -->
+    <div class="modal-overlay" id="idCardModal" onclick="closeIDCard(event)">
+      <div class="modal-sheet">
+        <div class="modal-handle"></div>
+        <div class="modal-title">Insurance ID Card</div>
+        <div class="id-card">
+          <div class="id-card-header">
+            <span class="id-card-logo">Farmers</span>
+            <span class="id-card-type">Auto Insurance</span>
+          </div>
+          <div class="id-card-body">
+            <div>
+              <div class="id-field-label">Insured</div>
+              <div class="id-field-value">Ed Villarreal</div>
+            </div>
+            <div>
+              <div class="id-field-label">Policy #</div>
+              <div class="id-field-value">TX-8842-2190-A</div>
+            </div>
+            <div>
+              <div class="id-field-label">Vehicle</div>
+              <div class="id-field-value">2019 Toyota Camry</div>
+            </div>
+            <div>
+              <div class="id-field-label">VIN</div>
+              <div class="id-field-value" style="font-size:12px;">4T1B11HK5KU235871</div>
+            </div>
+            <div>
+              <div class="id-field-label">Effective</div>
+              <div class="id-field-value">05/14/2025</div>
+            </div>
+            <div>
+              <div class="id-field-label">Expires</div>
+              <div class="id-field-value">11/14/2025</div>
+            </div>
+          </div>
+          <div class="id-card-footer">
+            Farmers Insurance Exchange · Farmers Group, Inc. · Zurich, Farmers New World Life<br>
+            Claims 24/7: 1-800-435-7764
+          </div>
+        </div>
+        <div style="text-align:center;padding:0 20px;">
+          <button onclick="showToast('ID Card saved to Photos');closeIDCard();" style="background:#cc2228;color:#fff;border:none;border-radius:12px;width:100%;height:48px;font-size:15px;font-weight:600;cursor:pointer;margin-bottom:10px;">
+            📲 Save to Wallet
+          </button>
+          <button onclick="showToast('ID Card sent to email');closeIDCard();" style="background:#f2f2f7;color:#1c1c1e;border:none;border-radius:12px;width:100%;height:44px;font-size:15px;cursor:pointer;">
+            ✉️ Email ID Card
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+  </div>
+</div>
+
+<script>
+// ── Clock ──────────────────────────────────────────
+function updateClock() {
+  const now = new Date();
+  let h = now.getHours(), m = now.getMinutes();
+  document.getElementById('clockDisplay').textContent =
+    `${h}:${m.toString().padStart(2,'0')}`;
+}
+updateClock();
+setInterval(updateClock, 10000);
+
+// ── Navigation ────────────────────────────────────
+const views = ['login','home','policy','claims','payment','chat','profile'];
+function navigateTo(name) {
+  views.forEach(v => {
+    document.getElementById('view-' + v).classList.remove('active');
+  });
+  document.getElementById('view-' + name).classList.add('active');
+}
+
+// ── Auth ──────────────────────────────────────────
+function doLogin() {
+  const u = document.getElementById('loginUser').value.trim();
+  const p = document.getElementById('loginPass').value.trim();
+  if (!u || !p) { showToast('Please enter username and password'); return; }
+  navigateTo('home');
+}
+function doLogout() {
+  document.getElementById('loginUser').value = '';
+  document.getElementById('loginPass').value = '';
+  navigateTo('login');
+}
+
+// ── Toast ─────────────────────────────────────────
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// ── ID Card Modal ─────────────────────────────────
+function showIDCard() {
+  document.getElementById('idCardModal').classList.add('open');
+}
+function closeIDCard(e) {
+  if (!e || e.target.id === 'idCardModal') {
+    document.getElementById('idCardModal').classList.remove('open');
+  }
+}
+
+// ── Autopay Toggle ────────────────────────────────
+let autopayOn = true;
+function toggleAutopay() {
+  autopayOn = !autopayOn;
+  const el = document.getElementById('autopayToggle');
+  el.classList.toggle('off', !autopayOn);
+  showToast(autopayOn ? 'AutoPay enabled' : 'AutoPay disabled');
+}
+
+// ── Pay Now ───────────────────────────────────────
+function handlePayNow() {
+  showToast('Processing payment of $123.67...');
+  setTimeout(() => showToast('✓ Payment successful! Confirmation #7741'), 2000);
+}
+
+// ── Webex Connect — Live Chat (IMI Widget) ───────
+function launchWebexChat() {
+  var nameVal = (document.getElementById('prechatName').value || '').trim();
+  var emailVal = (document.getElementById('prechatEmail').value || '').trim();
+  if (!nameVal || !emailVal) {
+    showToast('Please enter your name and email');
+    return;
+  }
+
+  // Show the widget iframe
+  document.getElementById('chat-prechat').style.display = 'none';
+  var active = document.getElementById('chat-active');
+  active.style.display = 'flex';
+  active.style.flexDirection = 'column';
+  updateChatStatus('connected');
+
+  // Load widget in iframe (lazy — only on first Start)
+  var iframe = document.getElementById('chatWidgetFrame');
+  if (!iframe.src || !iframe.src.includes('widget-frame')) {
+    iframe.src = 'widget-frame.html';
+  }
+}
+
+function exitChat() {
+  document.getElementById('chat-prechat').style.display = 'flex';
+  document.getElementById('chat-active').style.display = 'none';
+  // Reset iframe so widget restarts fresh next time
+  var iframe = document.getElementById('chatWidgetFrame');
+  if (iframe) iframe.src = 'about:blank';
+  navigateTo('home');
+}
+
+function updateChatStatus(state) {
+  var dot = document.getElementById('chatStatusDot');
+  var txt = document.getElementById('chatStatusText');
+  if (state === 'connecting') {
+    dot.style.background = '#ff9500';
+    txt.textContent = 'Connecting...';
+  } else if (state === 'connected') {
+    dot.style.background = '#4cd964';
+    txt.textContent = 'Live · Cisco Webex Contact Center';
+  } else if (state === 'error') {
+    dot.style.background = '#ff3b30';
+    txt.textContent = 'Connection error';
+  }
+}
+
+function escapeHtml(str) {
+  var div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+</script>
+
+</body>
+</html>
