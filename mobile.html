@@ -197,6 +197,17 @@
   .login-links a { color: rgba(255,255,255,.7); font-size: 13px; text-decoration: none; }
   .login-footer { margin-top: auto; color: rgba(255,255,255,.4); font-size: 11px; text-align: center; }
 
+  .field-hint {
+    color: rgba(255,255,255,.5);
+    font-size: 11px;
+    margin: -8px 0 8px 4px;
+  }
+  .field-error {
+    color: #ff6b6b;
+    font-size: 11px;
+    margin: -8px 0 8px 4px;
+  }
+
   /* ══════════════════════════════════
      HOME VIEW
   ══════════════════════════════════ */
@@ -775,11 +786,12 @@
           <span class="farmers-f">F</span>
         </div>
         <div class="login-title">Farmers Insurance</div>
-        <div class="login-subtitle">Sign in to manage your policy</div>
+        <div class="login-subtitle">Enter your phone number to sign in</div>
 
         <div class="input-group">
-          <input type="text" id="loginUser" placeholder="Username or Email" autocomplete="off">
+          <input type="tel" id="loginPhone" placeholder="+1 (555) 123-4567" autocomplete="off">
         </div>
+        <div class="field-hint" id="phoneHint">Format: +1 followed by 10 digits</div>
         <div class="input-group">
           <input type="password" id="loginPass" placeholder="Password" autocomplete="off">
         </div>
@@ -1361,13 +1373,39 @@ function navigateTo(name) {
 
 // ── Auth ──────────────────────────────────────────
 function doLogin() {
-  const u = document.getElementById('loginUser').value.trim();
+  const phoneRaw = document.getElementById('loginPhone').value.trim();
   const p = document.getElementById('loginPass').value.trim();
-  if (!u || !p) { showToast('Please enter username and password'); return; }
+  
+  // Strip non-digit chars except leading +
+  const cleaned = phoneRaw.replace(/[^\d+]/g, '');
+  
+  // Validate: must be +1 followed by exactly 10 digits
+  const phoneRegex = /^\+1\d{10}$/;
+  
+  const hintEl = document.getElementById('phoneHint');
+  
+  if (!cleaned) {
+    showToast('Please enter your phone number');
+    if (hintEl) { hintEl.textContent = 'Format: +1 followed by 10 digits'; hintEl.className = 'field-error'; }
+    return;
+  }
+  
+  if (!phoneRegex.test(cleaned)) {
+    showToast('Phone must be +1 followed by 10 digits');
+    if (hintEl) { hintEl.textContent = 'e.g. +15551234567'; hintEl.className = 'field-error'; }
+    return;
+  }
+  
+  if (!p) { showToast('Please enter a password'); return; }
+  
+  // Normalize phone to clean format
+  document.getElementById('loginPhone').value = cleaned;
+  if (hintEl) { hintEl.textContent = ''; hintEl.className = 'field-hint'; }
+  
   navigateTo('home');
 }
 function doLogout() {
-  document.getElementById('loginUser').value = '';
+  document.getElementById('loginPhone').value = '';
   document.getElementById('loginPass').value = '';
   navigateTo('login');
 }

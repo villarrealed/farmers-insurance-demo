@@ -240,6 +240,19 @@
     gap: 8px;
   }
 
+  .field-hint {
+    display: block;
+    margin-top: 4px;
+    font-size: .78rem;
+    color: var(--muted);
+  }
+  .field-error {
+    display: block;
+    margin-top: 4px;
+    font-size: .78rem;
+    color: var(--brand);
+  }
+
   .login-signin {
     width: 100%;
     border: none;
@@ -1368,17 +1381,18 @@
       <div class="login-panel">
         <div class="eyebrow">Customer Portal</div>
         <h2>Sign in to continue</h2>
-        <p class="lead" style="font-size:.98rem; max-width:32ch;">Use the demo credentials below to enter the Farmers Insurance portal.</p>
+        <p class="lead" style="font-size:.98rem; max-width:32ch;">Enter your phone number and password to access the portal.</p>
 
         <form class="login-form" onsubmit="event.preventDefault(); doLogin();">
           <div class="login-field">
-            <label for="loginUsername">Username</label>
-            <input id="loginUsername" type="text" value="ed.villarreal" autocomplete="username">
+            <label for="loginPhone">Phone Number</label>
+            <input id="loginPhone" type="tel" placeholder="+1 (555) 123-4567" autocomplete="tel">
+            <span class="field-hint" id="phoneHint">Format: +1 followed by 10 digits</span>
           </div>
 
           <div class="login-field">
             <label for="loginPassword">Password</label>
-            <input id="loginPassword" type="password" value="demo2025" autocomplete="current-password">
+            <input id="loginPassword" type="password" autocomplete="current-password">
           </div>
 
           <button class="login-signin" type="submit">Sign In</button>
@@ -1386,7 +1400,7 @@
 
         <div class="login-aux">
           <button class="text-link" type="button" onclick="showToast('Password reset is unavailable in demo mode')">Forgot password?</button>
-          <span class="list-note">Demo account · Secure portal preview</span>
+          <span class="list-note">Real phone number required · SMS-enabled</span>
         </div>
 
         <div class="login-footer">© 2025 Farmers Insurance · Demo Portal Experience</div>
@@ -2085,24 +2099,48 @@
     const views = ['home', 'policy', 'claims', 'payments', 'chat', 'profile'];
 
     function doLogin() {
-      const username = (document.getElementById('loginUsername').value || '').trim();
+      const phoneRaw = (document.getElementById('loginPhone').value || '').trim();
       const password = (document.getElementById('loginPassword').value || '').trim();
-
-      if (!username || !password) {
-        showToast('Please enter your username and password');
+      
+      // Strip non-digit chars except leading +
+      const cleaned = phoneRaw.replace(/[^\d+]/g, '');
+      
+      // Validate: must be +1 followed by exactly 10 digits
+      const phoneRegex = /^\+1\d{10}$/;
+      
+      const hintEl = document.getElementById('phoneHint');
+      
+      if (!cleaned) {
+        showToast('Please enter your phone number');
+        if (hintEl) { hintEl.textContent = 'Format: +1 followed by 10 digits'; hintEl.className = 'field-error'; }
         return;
       }
-
+      
+      if (!phoneRegex.test(cleaned)) {
+        showToast('Phone number must be +1 followed by 10 digits');
+        if (hintEl) { hintEl.textContent = 'Must be +1 followed by 10 digits (e.g. +15551234567)'; hintEl.className = 'field-error'; }
+        return;
+      }
+      
+      if (!password) {
+        showToast('Please enter your password');
+        return;
+      }
+      
+      // Normalize the phone field to clean format
+      document.getElementById('loginPhone').value = cleaned;
+      if (hintEl) { hintEl.textContent = ''; hintEl.className = 'field-hint'; }
+      
       const loginView = document.getElementById('login-view');
       const appWrapper = document.getElementById('app-wrapper');
-
+      
       loginView.classList.add('is-leaving');
-
+      
       window.setTimeout(function() {
         loginView.style.display = 'none';
         appWrapper.style.display = 'block';
         appWrapper.setAttribute('aria-hidden', 'false');
-
+        
         window.requestAnimationFrame(function() {
           appWrapper.classList.add('app-visible');
         });
