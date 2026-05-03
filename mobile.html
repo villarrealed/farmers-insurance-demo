@@ -883,6 +883,32 @@
   }
   @keyframes spin { to { transform: rotate(360deg); } }
   .login-loading-indicator span { color: rgba(255,255,255,.6); font-size: .82rem; }
+
+  /* ── Callback Bottom Sheet ── */
+  .cb-overlay {
+    position: fixed; inset: 0; z-index: 9000; background: rgba(0,0,0,.45);
+    display: flex; align-items: flex-end; justify-content: center;
+    opacity: 0; pointer-events: none; transition: opacity .25s;
+  }
+  .cb-overlay.open { opacity: 1; pointer-events: auto; }
+  .cb-sheet {
+    background: #fff; border-radius: 20px 20px 0 0; padding: 20px 24px 34px;
+    width: 100%; max-width: 420px;
+    transform: translateY(100%); transition: transform .35s cubic-bezier(.32,.72,0,1);
+    box-shadow: 0 -8px 32px rgba(0,0,0,.15);
+  }
+  .cb-overlay.open .cb-sheet { transform: translateY(0); }
+  .cb-handle {
+    width: 36px; height: 5px; background: #d1d1d6; border-radius: 3px;
+    margin: 0 auto 14px;
+  }
+  .cb-type-toggle { display: flex; gap: 8px; margin-bottom: 14px; }
+  .cb-type-btn {
+    flex: 1; padding: 12px 8px; border: 2px solid #e5e5ea; border-radius: 14px;
+    background: #fff; font-size: 14px; font-weight: 600; cursor: pointer;
+    transition: all .2s; text-align: center; color: #1c1c1e;
+  }
+  .cb-type-btn.active { border-color: #cc2228; background: #fff5f5; color: #cc2228; }
 </style>
 <script src="assets/js/profiles.js"></script>
 </head>
@@ -1214,6 +1240,9 @@
             <button onclick="navigateTo('chat')" style="background:#cc2228;color:#fff;border:none;border-radius:12px;width:100%;height:44px;font-size:15px;font-weight:600;cursor:pointer;">
               Chat with Claims Support
             </button>
+            <button onclick="openCallback()" style="background:#fff;color:#cc2228;border:2px solid #cc2228;border-radius:12px;width:100%;height:44px;font-size:15px;font-weight:600;cursor:pointer;margin-top:8px;">
+              🔔 Request a Callback
+            </button>
           </div>
         </div>
         <div style="height:80px;"></div>
@@ -1330,11 +1359,18 @@
               <div style="font-size:12px;color:#8e8e93;">24/7 Claims & Service</div>
             </div>
           </div>
-          <div onclick="showToast('Opening email...')" style="display:flex;align-items:center;gap:10px;padding:8px 0;cursor:pointer;">
+          <div onclick="showToast('Opening email...')" style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #e5e5ea;cursor:pointer;">
             <span style="font-size:20px;">✉️</span>
             <div>
               <div style="font-size:14px;font-weight:600;color:#1c1c1e;">Send a Message</div>
               <div style="font-size:12px;color:#8e8e93;">Response within 24 hours</div>
+            </div>
+          </div>
+          <div onclick="openCallback()" style="display:flex;align-items:center;gap:10px;padding:8px 0;cursor:pointer;">
+            <span style="font-size:20px;">🔔</span>
+            <div>
+              <div style="font-size:14px;font-weight:600;color:#1c1c1e;">Request a Callback</div>
+              <div style="font-size:12px;color:#8e8e93;">We'll call you — no hold time</div>
             </div>
           </div>
         </div>
@@ -1499,13 +1535,15 @@
 <!-- Settings Panel -->
 <div class="settings-overlay" id="settingsOverlay" onclick="if(event.target===this)closeSettings()">
   <div class="settings-panel">
-    <h3>JDS Configuration</h3>
-    <p>Configure your Journey Data Service token.</p>
+    <h3>WxCC Configuration</h3>
+    <p>Configure your Webex Contact Center token and callback settings.</p>
     <div class="token-status missing" id="tokenStatus">No token configured</div>
     <label for="jdsBaseInput">API Base URL</label>
     <input id="jdsBaseInput" type="text" placeholder="https://jds-us1.cjaas.cisco.com" style="font-family:monospace; font-size:.78rem; margin-bottom:12px; width:100%; padding:10px 12px; border:1px solid rgba(255,255,255,.15); border-radius:12px; background:rgba(255,255,255,.08); color:#fff;">
     <label for="jdsTokenInput">Bearer Token</label>
     <textarea id="jdsTokenInput" placeholder="Paste your JDS Bearer token here..."></textarea>
+    <label for="epIdInput">WxCC Entry Point ID</label>
+    <input id="epIdInput" type="text" placeholder="Paste your Entry Point ID..." style="font-family:monospace; font-size:.78rem; margin-bottom:12px; width:100%; padding:10px 12px; border:1px solid rgba(255,255,255,.15); border-radius:12px; background:rgba(255,255,255,.08); color:#fff;">
     <div class="settings-actions">
       <button class="settings-cancel" onclick="closeSettings()">Cancel</button>
       <button class="settings-save" onclick="saveSettings()">Save</button>
@@ -1528,6 +1566,49 @@
       <button class="register-cancel" onclick="cancelRegistration()">Cancel</button>
       <button class="register-submit" onclick="submitRegistration()">Create Profile</button>
     </div>
+  </div>
+</div>
+
+<!-- Callback Bottom Sheet -->
+<div class="cb-overlay" id="callbackOverlay" onclick="if(event.target===this)closeCallback()">
+  <div class="cb-sheet">
+    <div class="cb-handle"></div>
+    <h3 style="margin:0 0 4px;font-size:20px;font-weight:700;color:#1c1c1e;">Request a Callback</h3>
+    <p style="margin:0 0 16px;font-size:14px;color:#8e8e93;">We'll call you — no waiting on hold.</p>
+    
+    <div class="cb-type-toggle">
+      <button class="cb-type-btn active" id="cbTypeImmediate" onclick="setCbType('immediate')">📞 Call Me Now</button>
+      <button class="cb-type-btn" id="cbTypeScheduled" onclick="setCbType('scheduled')">📅 Schedule</button>
+    </div>
+
+    <label style="font-size:13px;font-weight:600;color:#1c1c1e;display:block;margin-bottom:4px;">Phone Number</label>
+    <input id="cbPhone" type="tel" readonly style="width:100%;padding:12px 14px;border:1px solid #d1d1d6;border-radius:12px;font-size:15px;background:#f2f2f7;color:#8e8e93;box-sizing:border-box;margin-bottom:10px;font-family:monospace;">
+
+    <label style="font-size:13px;font-weight:600;color:#1c1c1e;display:block;margin-bottom:4px;">Name</label>
+    <input id="cbName" type="text" readonly style="width:100%;padding:12px 14px;border:1px solid #d1d1d6;border-radius:12px;font-size:15px;background:#f2f2f7;color:#8e8e93;box-sizing:border-box;margin-bottom:10px;">
+
+    <label style="font-size:13px;font-weight:600;color:#1c1c1e;display:block;margin-bottom:4px;">Reason</label>
+    <select id="cbReason" style="width:100%;padding:12px 14px;border:1px solid #d1d1d6;border-radius:12px;font-size:15px;background:#fff;color:#1c1c1e;box-sizing:border-box;margin-bottom:10px;-webkit-appearance:none;appearance:none;">
+      <option value="General Support">General Support</option>
+      <option value="Claims">Claims Question</option>
+      <option value="Billing">Billing &amp; Payments</option>
+      <option value="Policy Change">Policy Change</option>
+      <option value="Roadside">Roadside Assistance</option>
+    </select>
+
+    <div id="cbScheduleFields" style="display:none;">
+      <label style="font-size:13px;font-weight:600;color:#1c1c1e;display:block;margin-bottom:4px;">Date</label>
+      <input id="cbDate" type="date" style="width:100%;padding:12px 14px;border:1px solid #d1d1d6;border-radius:12px;font-size:15px;background:#fff;box-sizing:border-box;margin-bottom:10px;">
+      <label style="font-size:13px;font-weight:600;color:#1c1c1e;display:block;margin-bottom:4px;">Time</label>
+      <input id="cbTime" type="time" value="10:00" style="width:100%;padding:12px 14px;border:1px solid #d1d1d6;border-radius:12px;font-size:15px;background:#fff;box-sizing:border-box;margin-bottom:10px;">
+    </div>
+
+    <button id="cbSubmitBtn" onclick="submitCallback()" style="background:linear-gradient(135deg,#cc2228,#991a1e);color:#fff;border:none;border-radius:14px;width:100%;height:50px;font-size:16px;font-weight:700;cursor:pointer;box-shadow:0 4px 16px rgba(204,34,40,.3);margin-top:4px;">
+      📞 Call Me Now
+    </button>
+    <button onclick="closeCallback()" style="background:none;border:none;color:#8e8e93;font-size:15px;font-weight:600;width:100%;padding:12px;cursor:pointer;">Cancel</button>
+    
+    <div class="cb-status" id="cbStatus" style="text-align:center;font-size:14px;min-height:20px;margin-top:4px;"></div>
   </div>
 </div>
 
@@ -1603,6 +1684,7 @@ function openSettings() {
   const token = getJdsToken();
   input.value = token;
   document.getElementById('jdsBaseInput').value = localStorage.getItem('farmers_jds_base') || 'https://api.wxcc-us1.cisco.com';
+  document.getElementById('epIdInput').value = localStorage.getItem('farmers_callback_ep') || '';
   if (token) {
     status.textContent = '✓ Token configured';
     status.className = 'token-status ok';
@@ -1631,6 +1713,12 @@ function saveSettings() {
   } else {
     localStorage.removeItem('farmers_jds_token');
     showToast('JDS token cleared');
+  }
+  var epId = document.getElementById('epIdInput').value.trim();
+  if (epId) {
+    localStorage.setItem('farmers_callback_ep', epId);
+  } else {
+    localStorage.removeItem('farmers_callback_ep');
   }
   closeSettings();
 }
@@ -1765,6 +1853,112 @@ function onEmailIDCard() {
   jdsPostEvent('action:email-id-card', {uiData:{title:'Email ID Card',iconType:'email',subTitle:'Requested ID card via email',filterTags:['id-card','action']}});
   showToast('ID Card sent to email');
   closeIDCard();
+}
+
+// ── Callback Feature ─────────────────────────────
+var currentCbType = 'immediate';
+
+function setCbType(type) {
+  currentCbType = type;
+  document.getElementById('cbTypeImmediate').classList.toggle('active', type === 'immediate');
+  document.getElementById('cbTypeScheduled').classList.toggle('active', type === 'scheduled');
+  document.getElementById('cbScheduleFields').style.display = type === 'scheduled' ? '' : 'none';
+  document.getElementById('cbSubmitBtn').textContent = type === 'immediate' ? '📞 Call Me Now' : '📅 Schedule Callback';
+}
+
+function openCallback() {
+  var phone = localStorage.getItem('farmers_demo_phone') || '';
+  var name = document.getElementById('prechatName') ? document.getElementById('prechatName').value : '';
+  document.getElementById('cbPhone').value = phone;
+  document.getElementById('cbName').value = name;
+  var now = new Date();
+  now.setHours(now.getHours() + 1, 0, 0, 0);
+  document.getElementById('cbDate').value = now.toISOString().split('T')[0];
+  document.getElementById('cbDate').min = new Date().toISOString().split('T')[0];
+  document.getElementById('cbTime').value = now.toTimeString().slice(0,5);
+  setCbType('immediate');
+  document.getElementById('cbStatus').textContent = '';
+  document.getElementById('cbStatus').style.color = '';
+  document.getElementById('callbackOverlay').classList.add('open');
+}
+
+function closeCallback() {
+  document.getElementById('callbackOverlay').classList.remove('open');
+}
+
+function submitCallback() {
+  var token = getJdsToken();
+  var base = getJdsBase();
+  var epId = localStorage.getItem('farmers_callback_ep');
+  
+  if (!token) { showToast('Configure your Bearer token in ⚙️ Settings'); return; }
+  if (!epId) { showToast('Configure Entry Point ID in ⚙️ Settings'); return; }
+  
+  var phone = document.getElementById('cbPhone').value;
+  var name = document.getElementById('cbName').value;
+  var reason = document.getElementById('cbReason').value;
+  
+  if (!phone) { showToast('Phone number required'); return; }
+  
+  var body = {
+    destination: phone,
+    entryPointId: epId,
+    attributes: { CallReason: reason, Name: name },
+    outboundType: 'CALLBACK',
+    mediaType: 'telephony',
+    callback: {
+      callbackOrigin: 'web',
+      callbackType: currentCbType
+    }
+  };
+  
+  if (currentCbType === 'scheduled') {
+    var d = document.getElementById('cbDate').value;
+    var t = document.getElementById('cbTime').value;
+    if (!d || !t) { showToast('Please select a date and time'); return; }
+    body.callback.callbackTime = new Date(d + 'T' + t).toISOString();
+  }
+  
+  var statusEl = document.getElementById('cbStatus');
+  statusEl.textContent = 'Requesting callback...';
+  statusEl.style.color = '#8e8e93';
+  document.getElementById('cbSubmitBtn').disabled = true;
+  
+  fetch(base + '/v1/tasks', {
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  })
+  .then(function(r) {
+    if (r.ok) return r.json();
+    return r.text().then(function(t) { throw new Error('HTTP ' + r.status + ': ' + t); });
+  })
+  .then(function(data) {
+    statusEl.textContent = currentCbType === 'immediate' 
+      ? '✓ Your phone will ring shortly!' 
+      : '✓ Callback scheduled!';
+    statusEl.style.color = '#34c759';
+    showToast(currentCbType === 'immediate' ? 'Your phone will ring shortly!' : 'Callback scheduled!');
+    jdsPostEvent('action:request-callback', {
+      uiData: {
+        title: 'Request Callback',
+        iconType: 'callback',
+        subTitle: (currentCbType === 'immediate' ? 'Requested immediate callback' : 'Scheduled callback'),
+        filterTags: ['callback', 'action']
+      },
+      callbackType: currentCbType,
+      reason: reason
+    });
+    setTimeout(closeCallback, 2500);
+  })
+  .catch(function(err) {
+    console.error('Callback error:', err);
+    statusEl.textContent = '✗ ' + err.message;
+    statusEl.style.color = '#ff3b30';
+  })
+  .finally(function() {
+    document.getElementById('cbSubmitBtn').disabled = false;
+  });
 }
 
 function personalizeUI(person) {

@@ -1453,6 +1453,38 @@
   .register-submit { background: var(--brand); color: #fff; }
   .register-cancel { background: transparent; color: var(--muted); }
 
+  /* ── Callback Modal ── */
+  .callback-overlay {
+    position: fixed; inset: 0; z-index: 9000; background: rgba(0,0,0,.55);
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; pointer-events: none; transition: opacity .25s;
+  }
+  .callback-overlay.open { opacity: 1; pointer-events: auto; }
+  .callback-panel {
+    background: #fff; border-radius: 18px; padding: 32px; width: 400px; max-width: 92vw;
+    box-shadow: 0 24px 64px rgba(0,0,0,.2);
+  }
+  .callback-panel h3 { margin: 0 0 4px; font-size: 1.3rem; }
+  .callback-panel p { margin: 0 0 18px; color: #666; font-size: .92rem; }
+  .callback-panel label { display: block; font-weight: 600; font-size: .85rem; margin-bottom: 4px; margin-top: 12px; }
+  .callback-panel input, .callback-panel select {
+    width: 100%; padding: 10px 14px; border: 1px solid #ddd; border-radius: 10px;
+    font-size: .92rem; box-sizing: border-box; outline: none;
+  }
+  .callback-panel input:focus, .callback-panel select:focus { border-color: #cc2228; }
+  .callback-panel input[readonly] { background: #f5f5f5; color: #666; }
+  .cb-type-toggle { display: flex; gap: 8px; margin-bottom: 8px; }
+  .cb-type-btn {
+    flex: 1; padding: 12px; border: 2px solid #e0e0e0; border-radius: 12px;
+    background: #fff; font-size: .9rem; font-weight: 600; cursor: pointer;
+    transition: all .2s; text-align: center;
+  }
+  .cb-type-btn.active { border-color: #cc2228; background: #fff5f5; color: #cc2228; }
+  .cb-type-btn:hover:not(.active) { border-color: #bbb; }
+  .cb-status { margin-top: 14px; text-align: center; font-size: .88rem; min-height: 20px; }
+  .cb-status.success { color: #2e7d32; }
+  .cb-status.error { color: #cc2228; }
+
   /* ── Login Loading State ── */
   .login-loading {
     display: none;
@@ -1760,6 +1792,16 @@
               </div>
               <strong>Call</strong>
             </button>
+            <button class="assist-row" type="button" onclick="openCallback()">
+              <div class="settings-copy">
+                <div class="row-icon" style="background:#fff0f0;">🔔</div>
+                <div>
+                  <strong>Request a Callback</strong>
+                  <div class="list-note">We'll call you — no hold time</div>
+                </div>
+              </div>
+              <strong>Request</strong>
+            </button>
           </div>
         </div>
       </section>
@@ -2029,6 +2071,15 @@
                   </div>
                 </div>
               </button>
+              <button class="assist-row" type="button" onclick="openCallback()" style="background:#fff5f5;">
+                <div class="settings-copy">
+                  <div class="row-icon" style="background:#fff0f0;">🔔</div>
+                  <div>
+                    <strong>Request a Callback</strong>
+                    <div class="list-note">We'll call you — no hold time</div>
+                  </div>
+                </div>
+              </button>
             </div>
           </aside>
 
@@ -2230,13 +2281,15 @@
   <!-- Settings Panel -->
   <div class="settings-overlay" id="settingsOverlay" onclick="if(event.target===this)closeSettings()">
     <div class="settings-panel">
-      <h3>JDS Configuration</h3>
-      <p>Configure your Journey Data Service token for person lookup and creation.</p>
+      <h3>WxCC Configuration</h3>
+      <p>Configure your Webex Contact Center token and callback settings.</p>
       <div class="token-status missing" id="tokenStatus">No token configured</div>
       <label for="jdsBaseInput">API Base URL</label>
       <input id="jdsBaseInput" type="text" placeholder="https://jds-us1.cjaas.cisco.com" style="font-family:monospace; font-size:.82rem; margin-bottom:14px;">
       <label for="jdsTokenInput">Bearer Token</label>
       <textarea id="jdsTokenInput" placeholder="Paste your JDS Bearer token here..."></textarea>
+      <label for="epIdInput">WxCC Entry Point ID</label>
+      <input id="epIdInput" type="text" placeholder="Paste your Entry Point ID here..." style="font-family:monospace; font-size:.82rem; margin-bottom:14px;">
       <div class="settings-actions">
         <button class="settings-cancel" onclick="closeSettings()">Cancel</button>
         <button class="settings-save" onclick="saveSettings()">Save Token</button>
@@ -2259,6 +2312,50 @@
         <button class="register-cancel" onclick="cancelRegistration()">Cancel</button>
         <button class="register-submit" onclick="submitRegistration()">Create Profile</button>
       </div>
+    </div>
+  </div>
+
+  <!-- Callback Modal -->
+  <div class="callback-overlay" id="callbackOverlay" onclick="if(event.target===this)closeCallback()">
+    <div class="callback-panel">
+      <h3>Request a Callback</h3>
+      <p>We'll call you — no waiting on hold.</p>
+
+      <!-- Callback type toggle: two buttons side by side -->
+      <div class="cb-type-toggle">
+        <button class="cb-type-btn active" id="cbTypeImmediate" onclick="setCbType('immediate')">📞 Call Me Now</button>
+        <button class="cb-type-btn" id="cbTypeScheduled" onclick="setCbType('scheduled')">📅 Schedule</button>
+      </div>
+
+      <label for="cbPhone">Phone Number</label>
+      <input id="cbPhone" type="tel" readonly style="font-family:monospace;">
+
+      <label for="cbName">Name</label>
+      <input id="cbName" type="text" readonly>
+
+      <label for="cbReason">Reason</label>
+      <select id="cbReason">
+        <option value="General Support">General Support</option>
+        <option value="Claims">Claims Question</option>
+        <option value="Billing">Billing &amp; Payments</option>
+        <option value="Policy Change">Policy Change</option>
+        <option value="Roadside">Roadside Assistance</option>
+      </select>
+
+      <!-- Scheduled time picker - hidden by default -->
+      <div id="cbScheduleFields" style="display:none;">
+        <label for="cbDate">Date</label>
+        <input id="cbDate" type="date">
+        <label for="cbTime">Time</label>
+        <input id="cbTime" type="time" value="10:00">
+      </div>
+
+      <div class="settings-actions">
+        <button class="settings-cancel" onclick="closeCallback()">Cancel</button>
+        <button class="settings-save" id="cbSubmitBtn" onclick="submitCallback()">Call Me Now</button>
+      </div>
+
+      <div class="cb-status" id="cbStatus"></div>
     </div>
   </div>
 
@@ -2312,6 +2409,7 @@
       const token = getJdsToken();
       input.value = token;
       document.getElementById('jdsBaseInput').value = localStorage.getItem('farmers_jds_base') || 'https://api.wxcc-us1.cisco.com';
+      document.getElementById('epIdInput').value = localStorage.getItem('farmers_callback_ep') || '';
       if (token) {
         status.textContent = '✓ Token configured';
         status.className = 'token-status ok';
@@ -2340,6 +2438,12 @@
       } else {
         localStorage.removeItem('farmers_jds_token');
         showToast('JDS token cleared');
+      }
+      const epId = document.getElementById('epIdInput').value.trim();
+      if (epId) {
+        localStorage.setItem('farmers_callback_ep', epId);
+      } else {
+        localStorage.removeItem('farmers_callback_ep');
       }
       closeSettings();
     }
@@ -2465,6 +2569,113 @@
     function onFileClaim() {
       jdsPostEvent('action:file-claim', {uiData:{title:'File Claim',iconType:'claim',subTitle:'Started new claim filing',filterTags:['claim','action']}});
       showToast('New claim workflow started');
+    }
+
+    // ── Callback Feature ─────────────────────────────
+    let currentCbType = 'immediate';
+
+    function setCbType(type) {
+      currentCbType = type;
+      document.getElementById('cbTypeImmediate').classList.toggle('active', type === 'immediate');
+      document.getElementById('cbTypeScheduled').classList.toggle('active', type === 'scheduled');
+      document.getElementById('cbScheduleFields').style.display = type === 'scheduled' ? '' : 'none';
+      document.getElementById('cbSubmitBtn').textContent = type === 'immediate' ? 'Call Me Now' : 'Schedule Callback';
+    }
+
+    function openCallback() {
+      const phone = localStorage.getItem('farmers_demo_phone') || '';
+      const name = document.getElementById('prechatName') ? document.getElementById('prechatName').value : '';
+      document.getElementById('cbPhone').value = phone;
+      document.getElementById('cbName').value = name;
+      // Set default date to today, time to next hour
+      const now = new Date();
+      now.setHours(now.getHours() + 1, 0, 0, 0);
+      document.getElementById('cbDate').value = now.toISOString().split('T')[0];
+      document.getElementById('cbDate').min = new Date().toISOString().split('T')[0];
+      document.getElementById('cbTime').value = now.toTimeString().slice(0,5);
+      setCbType('immediate');
+      document.getElementById('cbStatus').textContent = '';
+      document.getElementById('cbStatus').className = 'cb-status';
+      document.getElementById('callbackOverlay').classList.add('open');
+    }
+
+    function closeCallback() {
+      document.getElementById('callbackOverlay').classList.remove('open');
+    }
+
+    function submitCallback() {
+      const token = getJdsToken();
+      const base = getJdsBase();
+      const epId = localStorage.getItem('farmers_callback_ep');
+      
+      if (!token) { showToast('Configure your Bearer token in ⚙️ Settings'); return; }
+      if (!epId) { showToast('Configure Entry Point ID in ⚙️ Settings'); return; }
+      
+      const phone = document.getElementById('cbPhone').value;
+      const name = document.getElementById('cbName').value;
+      const reason = document.getElementById('cbReason').value;
+      
+      if (!phone) { showToast('Phone number required'); return; }
+      
+      const body = {
+        destination: phone,
+        entryPointId: epId,
+        attributes: { CallReason: reason, Name: name },
+        outboundType: 'CALLBACK',
+        mediaType: 'telephony',
+        callback: {
+          callbackOrigin: 'web',
+          callbackType: currentCbType
+        }
+      };
+      
+      if (currentCbType === 'scheduled') {
+        const date = document.getElementById('cbDate').value;
+        const time = document.getElementById('cbTime').value;
+        if (!date || !time) { showToast('Please select a date and time'); return; }
+        body.callback.callbackTime = new Date(date + 'T' + time).toISOString();
+      }
+      
+      const statusEl = document.getElementById('cbStatus');
+      statusEl.textContent = 'Requesting callback...';
+      statusEl.className = 'cb-status';
+      document.getElementById('cbSubmitBtn').disabled = true;
+      
+      fetch(base + '/v1/tasks', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      })
+      .then(function(r) {
+        if (r.ok) return r.json();
+        return r.text().then(function(t) { throw new Error('HTTP ' + r.status + ': ' + t); });
+      })
+      .then(function(data) {
+        statusEl.textContent = currentCbType === 'immediate' 
+          ? '✓ Callback requested — your phone will ring shortly!' 
+          : '✓ Callback scheduled successfully!';
+        statusEl.className = 'cb-status success';
+        showToast(currentCbType === 'immediate' ? 'Your phone will ring shortly!' : 'Callback scheduled!');
+        jdsPostEvent('action:request-callback', {
+          uiData: {
+            title: 'Request Callback',
+            iconType: 'callback',
+            subTitle: (currentCbType === 'immediate' ? 'Requested immediate callback' : 'Scheduled callback'),
+            filterTags: ['callback', 'action']
+          },
+          callbackType: currentCbType,
+          reason: reason
+        });
+        setTimeout(closeCallback, 2500);
+      })
+      .catch(function(err) {
+        console.error('Callback error:', err);
+        statusEl.textContent = '✗ ' + err.message;
+        statusEl.className = 'cb-status error';
+      })
+      .finally(function() {
+        document.getElementById('cbSubmitBtn').disabled = false;
+      });
     }
 
     function onSaveToWallet() {
