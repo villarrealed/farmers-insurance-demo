@@ -3322,6 +3322,46 @@
       });
     }
 
+    function launchWebexChat() {
+      var btn = document.getElementById('startChatBtn');
+      btn.disabled = true;
+      btn.textContent = 'Connecting...';
+      updateChatStatus('connecting');
+
+      // Fire JDS event
+      jdsPostEvent('action:start-chat', {uiData:{title:'Start Chat',iconType:'chat',subTitle:'Started live chat',filterTags:['chat','action']}});
+
+      initWebexSDK(function(ok) {
+        if (!ok) {
+          btn.disabled = false;
+          btn.textContent = 'Start Live Chat';
+          updateChatStatus('error');
+          renderSystemMessage('Failed to initialize chat SDK.');
+          return;
+        }
+        registerSDKUser(function(regOk) {
+          if (!regOk) {
+            btn.disabled = false;
+            btn.textContent = 'Start Live Chat';
+            updateChatStatus('error');
+            renderSystemMessage('Failed to register. Check your phone number.');
+            return;
+          }
+          // Switch to active chat UI
+          document.getElementById('chat-prechat').style.display = 'none';
+          document.getElementById('chat-active').style.display = 'flex';
+
+          connectSDKMessaging(function(connected) {
+            if (connected) {
+              renderSystemMessage('Connected — waiting for agent flow...');
+            } else {
+              renderSystemMessage('Connecting to messaging service...');
+            }
+          });
+        });
+      });
+    }
+
     function sendChatMessage() {
       var input = document.getElementById('chatInput');
       var text = (input.value || '').trim();
