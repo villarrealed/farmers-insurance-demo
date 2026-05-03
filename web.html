@@ -3207,8 +3207,36 @@
       };
       receiver.onMessageReceived = function(message) {
         console.log('[SDK] Message received:', message);
-        var text = '';
-        try { text = message.getMessage ? message.getMessage() : (message.message || String(message)); } catch(e) { text = String(message); }
+
+        // Check for form template (pre-chat form request from flow)
+        var attachments = message.getAttachments ? message.getAttachments() : null;
+        if (attachments && attachments.length > 0) {
+          for (var i = 0; i < attachments.length; i++) {
+            var att = attachments[i];
+            if (att instanceof IMI.ICFormTemplateAttachment ||
+                (att.getTemplateType && att.getTemplateType() === 'form') ||
+                (att.templateType && att.templateType === 'form')) {
+              autoRespondToForm(message, att);
+              return; // Don't display form template as chat bubble
+            }
+          }
+        }
+
+        // Also detect form template in raw message body (fallback)
+        var rawText = '';
+        try { rawText = message.getMessage ? message.getMessage() : (message.message || ''); } catch(e) {}
+        if (rawText && rawText.indexOf('"templateType":"form"') !== -1) {
+          try {
+            var parsed = JSON.parse(rawText);
+            if (parsed.templateType === 'form') {
+              autoRespondToForm(message, parsed);
+              return;
+            }
+          } catch(e) {}
+        }
+
+        // Normal text message from agent
+        var text = rawText || String(message);
         if (text) renderMessage(text, 'agent');
       };
       sdkMessaging.setICMessagingReceiver(receiver);
@@ -3216,6 +3244,52 @@
       sdkMessaging.connect();
       // Give it a moment to connect
       setTimeout(function() { callback(sdkConnected); }, 1500);
+    }
+
+    function autoRespondToForm(originalMessage, formAttachment) {
+      renderSystemMessage('Submitting your information...');
+
+      var nameVal = (document.getElementById('prechatName').value || '').trim();
+      var emailVal = (document.getElementById('prechatEmail').value || '').trim();
+
+      // Get the transaction ID to link response to the form
+      var tid = '';
+      try { tid = originalMessage.getTransactionId ? originalMessage.getTransactionId() : (originalMessage.tid || ''); } catch(e) {}
+
+      // Get the templateId from the form attachment
+      var templateId = '';
+      try { templateId = formAttachment.getTemplateId ? formAttachment.getTemplateId() : (formAttachment.templateId || ''); } catch(e) {}
+
+      // Build form response using ICInteractiveData
+      var interactiveData = new IMI.ICInteractiveData();
+      interactiveData.setType(IMI.ICInteractiveDataType.FormResponse);
+      if (tid) interactiveData.setRelatedTransactionId(tid);
+      interactiveData.setSubmittedAt(new Date().toISOString());
+
+      // Payload with filled form fields matching the template structure
+      interactiveData.setPayload({
+        fields: [
+          { name: 'Name', type: 'name', label: 'Name', value: nameVal },
+          { name: 'email', type: 'email', label: 'Email', value: emailVal }
+        ],
+        templateId: templateId || '49TMSMNT0W'
+      });
+
+      var response = new IMI.ICMessage();
+      response.setMessage(nameVal);
+      response.setThread(sdkThread);
+      response.setInteractiveData(interactiveData);
+
+      sdkMessaging.publishMessage(response, {
+        onSuccess: function() {
+          console.log('[SDK] Form response submitted');
+          renderSystemMessage('Info submitted — connecting to agent...');
+        },
+        onFailure: function(errCode, errMsg) {
+          console.error('[SDK] Form response failed:', errCode, errMsg);
+          renderSystemMessage('Failed to submit info. Please try again.');
+        }
+      });
     }
 
     function createSDKThread(callback, formData) {
