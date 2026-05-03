@@ -3208,6 +3208,17 @@
       };
       receiver.onMessageReceived = function(message) {
         console.log('[SDK] Message received:', message);
+        // Debug: dump full message details
+        try {
+          var dbg = {
+            text: message.getMessage ? message.getMessage() : null,
+            thread: message.getThread ? (function(t){ return t ? (t.getId ? t.getId() : t) : null; })(message.getThread()) : null,
+            tid: message.getTransactionId ? message.getTransactionId() : null,
+            attachments: message.getAttachments ? message.getAttachments() : [],
+            interactiveData: message.getInteractiveData ? message.getInteractiveData() : null
+          };
+          console.log('[SDK] Message details:', JSON.stringify(dbg, null, 2));
+        } catch(e) { console.log('[SDK] Debug dump error:', e); }
 
         // Detect form template messages (have attachments with templateType "form")
         var isFormTemplate = false;
@@ -3216,14 +3227,16 @@
           var attachments = message.getAttachments ? message.getAttachments() : [];
           for (var i = 0; i < (attachments || []).length; i++) {
             var a = attachments[i];
+            console.log('[SDK] Attachment ' + i + ':', JSON.stringify(a));
             if ((a.templateType && a.templateType === 'form') ||
-                (a.getTemplateType && a.getTemplateType() === 'form')) {
+                (a.getTemplateType && a.getTemplateType() === 'form') ||
+                (a.contentType && a.contentType === 'template')) {
               isFormTemplate = true;
               formAtt = a;
               break;
             }
           }
-        } catch(e) {}
+        } catch(e) { console.log('[SDK] Attachment parse error:', e); }
 
         if (isFormTemplate) {
           // Already responded — ignore ALL subsequent form templates
