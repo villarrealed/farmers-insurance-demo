@@ -748,77 +748,6 @@
     .dynamic-island { top: 6px; }
   }
 
-  /* ── Settings Gear ── */
-  .settings-gear {
-    position: fixed;
-    bottom: 16px;
-    right: 16px;
-    z-index: 9999;
-    width: 38px;
-    height: 38px;
-    border-radius: 50%;
-    background: rgba(255,255,255,.15);
-    border: 1px solid rgba(255,255,255,.2);
-    backdrop-filter: blur(8px);
-    display: grid;
-    place-items: center;
-    cursor: pointer;
-    font-size: 1rem;
-    transition: transform .2s;
-  }
-  .settings-gear:hover { transform: rotate(30deg); }
-
-  /* ── Settings Panel ── */
-  .settings-overlay {
-    display: none;
-    position: fixed;
-    inset: 0;
-    z-index: 10000;
-    background: rgba(0,0,0,.6);
-    backdrop-filter: blur(4px);
-    place-items: center;
-  }
-  .settings-overlay.open { display: grid; }
-  .settings-panel {
-    background: #1e1e2e;
-    border-radius: 20px;
-    padding: 24px;
-    width: min(360px, 88vw);
-    box-shadow: 0 20px 50px rgba(0,0,0,.5);
-    color: #fff;
-  }
-  .settings-panel h3 { margin: 0 0 6px; font-size: 1.1rem; }
-  .settings-panel p { margin: 0 0 14px; color: rgba(255,255,255,.6); font-size: .82rem; }
-  .settings-panel label { display: block; font-weight: 600; font-size: .8rem; margin-bottom: 4px; color: rgba(255,255,255,.7); }
-  .settings-panel textarea {
-    width: 100%;
-    padding: 10px 12px;
-    border: 1px solid rgba(255,255,255,.15);
-    border-radius: 12px;
-    background: rgba(255,255,255,.08);
-    color: #fff;
-    font-family: monospace;
-    font-size: .78rem;
-    min-height: 70px;
-    resize: vertical;
-    margin-bottom: 14px;
-  }
-  .settings-actions { display: flex; gap: 8px; justify-content: flex-end; }
-  .settings-actions button {
-    padding: 8px 18px;
-    border-radius: 12px;
-    border: none;
-    cursor: pointer;
-    font: inherit;
-    font-weight: 600;
-    font-size: .85rem;
-  }
-  .settings-save { background: #cc2228; color: #fff; }
-  .settings-cancel { background: transparent; color: rgba(255,255,255,.5); }
-  .token-status { font-size: .72rem; padding: 5px 8px; border-radius: 8px; margin-bottom: 12px; }
-  .token-status.ok { background: rgba(76,217,100,.15); color: #4cd964; }
-  .token-status.missing { background: rgba(255,149,0,.15); color: #ff9500; }
-
   /* ── Registration Modal ── */
   .register-overlay {
     display: none;
@@ -1522,28 +1451,6 @@
   </div>
 </div>
 
-<!-- Settings Gear -->
-<button class="settings-gear" onclick="openSettings()" title="JDS Settings">⚙️</button>
-
-<!-- Settings Panel -->
-<div class="settings-overlay" id="settingsOverlay" onclick="if(event.target===this)closeSettings()">
-  <div class="settings-panel">
-    <h3>WxCC Configuration</h3>
-    <p>Configure your Webex Contact Center token and callback settings.</p>
-    <div class="token-status missing" id="tokenStatus">No token configured</div>
-    <label for="jdsBaseInput">API Base URL</label>
-    <input id="jdsBaseInput" type="text" placeholder="https://jds-us1.cjaas.cisco.com" style="font-family:monospace; font-size:.78rem; margin-bottom:12px; width:100%; padding:10px 12px; border:1px solid rgba(255,255,255,.15); border-radius:12px; background:rgba(255,255,255,.08); color:#fff;">
-    <label for="jdsTokenInput">Bearer Token</label>
-    <textarea id="jdsTokenInput" placeholder="Paste your JDS Bearer token here..."></textarea>
-    <label for="epIdInput">WxCC Entry Point ID</label>
-    <input id="epIdInput" type="text" placeholder="Paste your Entry Point ID..." style="font-family:monospace; font-size:.78rem; margin-bottom:12px; width:100%; padding:10px 12px; border:1px solid rgba(255,255,255,.15); border-radius:12px; background:rgba(255,255,255,.08); color:#fff;">
-    <div class="settings-actions">
-      <button class="settings-cancel" onclick="closeSettings()">Cancel</button>
-      <button class="settings-save" onclick="saveSettings()">Save</button>
-    </div>
-  </div>
-</div>
-
 <!-- Registration Modal -->
 <div class="register-overlay" id="registerOverlay">
   <div class="register-card">
@@ -1656,52 +1563,6 @@ let currentProfile = null;
 
 function getJdsToken() {
   return localStorage.getItem('farmers_jds_token') || '';
-}
-
-function openSettings() {
-  const overlay = document.getElementById('settingsOverlay');
-  const input = document.getElementById('jdsTokenInput');
-  const status = document.getElementById('tokenStatus');
-  const token = getJdsToken();
-  input.value = token;
-  document.getElementById('jdsBaseInput').value = localStorage.getItem('farmers_jds_base') || 'https://api.wxcc-us1.cisco.com';
-  document.getElementById('epIdInput').value = localStorage.getItem('farmers_callback_ep') || '';
-  if (token) {
-    status.textContent = '✓ Token configured';
-    status.className = 'token-status ok';
-  } else {
-    status.textContent = 'No token configured';
-    status.className = 'token-status missing';
-  }
-  overlay.classList.add('open');
-}
-
-function closeSettings() {
-  document.getElementById('settingsOverlay').classList.remove('open');
-}
-
-function saveSettings() {
-  const base = document.getElementById('jdsBaseInput').value.trim();
-  if (base) {
-    localStorage.setItem('farmers_jds_base', base);
-  } else {
-    localStorage.removeItem('farmers_jds_base');
-  }
-  const token = document.getElementById('jdsTokenInput').value.trim();
-  if (token) {
-    localStorage.setItem('farmers_jds_token', token);
-    showToast('JDS token saved');
-  } else {
-    localStorage.removeItem('farmers_jds_token');
-    showToast('JDS token cleared');
-  }
-  var epId = document.getElementById('epIdInput').value.trim();
-  if (epId) {
-    localStorage.setItem('farmers_callback_ep', epId);
-  } else {
-    localStorage.removeItem('farmers_callback_ep');
-  }
-  closeSettings();
 }
 
 async function jdsLookupPerson(phone) {
@@ -1856,8 +1717,8 @@ function submitCallback() {
   var base = getJdsBase();
   var epId = localStorage.getItem('farmers_callback_ep');
   
-  if (!token) { showToast('Configure your Bearer token in ⚙️ Settings'); return; }
-  if (!epId) { showToast('Configure Entry Point ID in ⚙️ Settings'); return; }
+  if (!token) { showToast('Configure your Bearer token in index.html Settings'); return; }
+  if (!epId) { showToast('Configure Entry Point ID in index.html Settings'); return; }
   
   var phone = document.getElementById('cbPhone').value;
   var name = document.getElementById('cbName').value;

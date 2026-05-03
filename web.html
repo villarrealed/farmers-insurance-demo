@@ -1345,57 +1345,7 @@
     .login-aux { flex-direction: column; align-items: flex-start; }
   }
 
-  /* ── Settings Gear ── */
-  .settings-gear {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    z-index: 9999;
-    width: 44px;
-    height: 44px;
-    border-radius: 50%;
-    background: var(--surface-strong);
-    border: 1px solid var(--line);
-    box-shadow: var(--shadow-soft);
-    display: grid;
-    place-items: center;
-    cursor: pointer;
-    font-size: 1.2rem;
-    transition: transform .2s;
-  }
-  .settings-gear:hover { transform: rotate(30deg); }
-
-  /* ── Settings Panel ── */
-  .settings-overlay {
-    display: none;
-    position: fixed;
-    inset: 0;
-    z-index: 10000;
-    background: rgba(0,0,0,.4);
-    backdrop-filter: blur(4px);
-    place-items: center;
-  }
-  .settings-overlay.open { display: grid; }
-  .settings-panel {
-    background: var(--surface-strong);
-    border-radius: var(--radius);
-    padding: 28px;
-    width: min(440px, 90vw);
-    box-shadow: var(--shadow);
-  }
-  .settings-panel h3 { margin: 0 0 8px; font-size: 1.2rem; }
-  .settings-panel p { margin: 0 0 16px; color: var(--muted); font-size: .9rem; }
-  .settings-panel label { display: block; font-weight: 600; font-size: .85rem; margin-bottom: 6px; }
-  .settings-panel input, .settings-panel textarea {
-    width: 100%;
-    padding: 10px 14px;
-    border: 1px solid var(--line);
-    border-radius: 12px;
-    font: inherit;
-    font-size: .92rem;
-    margin-bottom: 16px;
-  }
-  .settings-panel textarea { min-height: 80px; resize: vertical; font-family: monospace; font-size: .82rem; }
+  /* ── Settings Actions (used by callback modal) ── */
   .settings-actions { display: flex; gap: 10px; justify-content: flex-end; }
   .settings-actions button {
     padding: 10px 20px;
@@ -1407,9 +1357,6 @@
   }
   .settings-save { background: var(--brand); color: #fff; }
   .settings-cancel { background: transparent; color: var(--muted); }
-  .token-status { font-size: .78rem; padding: 6px 10px; border-radius: 8px; margin-bottom: 14px; }
-  .token-status.ok { background: var(--success-bg); color: var(--success-fg); }
-  .token-status.missing { background: var(--warn-bg); color: var(--warn-fg); }
 
   /* ── Registration Modal ── */
   .register-overlay {
@@ -2267,28 +2214,6 @@
     </div>
   </div>
 
-  <!-- Settings Gear -->
-  <button class="settings-gear" onclick="openSettings()" title="JDS Settings">⚙️</button>
-
-  <!-- Settings Panel -->
-  <div class="settings-overlay" id="settingsOverlay" onclick="if(event.target===this)closeSettings()">
-    <div class="settings-panel">
-      <h3>WxCC Configuration</h3>
-      <p>Configure your Webex Contact Center token and callback settings.</p>
-      <div class="token-status missing" id="tokenStatus">No token configured</div>
-      <label for="jdsBaseInput">API Base URL</label>
-      <input id="jdsBaseInput" type="text" placeholder="https://jds-us1.cjaas.cisco.com" style="font-family:monospace; font-size:.82rem; margin-bottom:14px;">
-      <label for="jdsTokenInput">Bearer Token</label>
-      <textarea id="jdsTokenInput" placeholder="Paste your JDS Bearer token here..."></textarea>
-      <label for="epIdInput">WxCC Entry Point ID</label>
-      <input id="epIdInput" type="text" placeholder="Paste your Entry Point ID here..." style="font-family:monospace; font-size:.82rem; margin-bottom:14px;">
-      <div class="settings-actions">
-        <button class="settings-cancel" onclick="closeSettings()">Cancel</button>
-        <button class="settings-save" onclick="saveSettings()">Save Token</button>
-      </div>
-    </div>
-  </div>
-
   <!-- Registration Modal -->
   <div class="register-overlay" id="registerOverlay">
     <div class="register-card">
@@ -2378,52 +2303,6 @@
 
     function getJdsToken() {
       return localStorage.getItem('farmers_jds_token') || '';
-    }
-
-    function openSettings() {
-      const overlay = document.getElementById('settingsOverlay');
-      const input = document.getElementById('jdsTokenInput');
-      const status = document.getElementById('tokenStatus');
-      const token = getJdsToken();
-      input.value = token;
-      document.getElementById('jdsBaseInput').value = localStorage.getItem('farmers_jds_base') || 'https://api.wxcc-us1.cisco.com';
-      document.getElementById('epIdInput').value = localStorage.getItem('farmers_callback_ep') || '';
-      if (token) {
-        status.textContent = '✓ Token configured';
-        status.className = 'token-status ok';
-      } else {
-        status.textContent = 'No token configured';
-        status.className = 'token-status missing';
-      }
-      overlay.classList.add('open');
-    }
-
-    function closeSettings() {
-      document.getElementById('settingsOverlay').classList.remove('open');
-    }
-
-    function saveSettings() {
-      const base = document.getElementById('jdsBaseInput').value.trim();
-      if (base) {
-        localStorage.setItem('farmers_jds_base', base);
-      } else {
-        localStorage.removeItem('farmers_jds_base');
-      }
-      const token = document.getElementById('jdsTokenInput').value.trim();
-      if (token) {
-        localStorage.setItem('farmers_jds_token', token);
-        showToast('JDS token saved');
-      } else {
-        localStorage.removeItem('farmers_jds_token');
-        showToast('JDS token cleared');
-      }
-      const epId = document.getElementById('epIdInput').value.trim();
-      if (epId) {
-        localStorage.setItem('farmers_callback_ep', epId);
-      } else {
-        localStorage.removeItem('farmers_callback_ep');
-      }
-      closeSettings();
     }
 
     async function jdsLookupPerson(phone) {
@@ -2569,8 +2448,8 @@
       const base = getJdsBase();
       const epId = localStorage.getItem('farmers_callback_ep');
       
-      if (!token) { showToast('Configure your Bearer token in ⚙️ Settings'); return; }
-      if (!epId) { showToast('Configure Entry Point ID in ⚙️ Settings'); return; }
+      if (!token) { showToast('Bearer token not configured'); return; }
+      if (!epId) { showToast('Entry Point ID not configured'); return; }
       
       const phone = document.getElementById('cbPhone').value;
       const name = document.getElementById('cbName').value;

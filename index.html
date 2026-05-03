@@ -454,7 +454,7 @@
       white-space: nowrap;
     }
 
-    .powered-dot {
+      .powered-dot {
       width: 8px;
       height: 8px;
       border-radius: 50%;
@@ -462,6 +462,60 @@
       box-shadow: 0 0 0 6px rgba(204,34,40,.1);
       flex: 0 0 auto;
     }
+
+    .settings-gear {
+      position: fixed; bottom: 24px; right: 24px; z-index: 8000;
+      width: 48px; height: 48px; border-radius: 50%;
+      border: 1px solid var(--line);
+      background: var(--surface-strong);
+      box-shadow: 0 8px 24px rgba(31,34,48,.12);
+      font-size: 22px; cursor: pointer;
+      display: grid; place-items: center;
+      transition: transform .3s, box-shadow .3s;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+    .settings-gear:hover { transform: rotate(30deg); box-shadow: 0 8px 32px rgba(204,34,40,.18); }
+
+    .settings-overlay {
+      position: fixed; inset: 0; z-index: 9000;
+      background: rgba(31,34,48,.4);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      display: none; place-items: center;
+    }
+    .settings-overlay.open { display: grid; }
+    .settings-panel {
+      background: var(--surface-strong);
+      border: 1px solid rgba(255,255,255,.6);
+      border-radius: var(--radius-lg);
+      padding: 32px;
+      width: 440px; max-width: 92vw;
+      box-shadow: 0 32px 80px rgba(31,34,48,.18);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+    }
+    .settings-panel h3 { margin: 0 0 6px; font-size: 1.2rem; color: var(--ink); }
+    .settings-panel p { margin: 0 0 16px; color: var(--muted); font-size: .9rem; line-height: 1.5; }
+    .settings-panel label { display: block; font-weight: 600; font-size: .85rem; margin-bottom: 6px; margin-top: 14px; color: var(--ink); }
+    .settings-panel input, .settings-panel textarea {
+      width: 100%; padding: 10px 14px; border: 1px solid var(--line); border-radius: 12px;
+      font-size: .92rem; background: rgba(255,255,255,.6); color: var(--ink);
+      box-sizing: border-box; outline: none; transition: border-color .2s;
+    }
+    .settings-panel input:focus, .settings-panel textarea:focus { border-color: var(--brand); }
+    .settings-panel textarea { min-height: 80px; resize: vertical; font-family: monospace; font-size: .82rem; }
+    .settings-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+    .settings-actions button {
+      padding: 10px 20px; border-radius: 12px; border: none;
+      font-weight: 600; font-size: .9rem; cursor: pointer; transition: opacity .2s;
+    }
+    .settings-save { background: var(--brand); color: #fff; }
+    .settings-save:hover { opacity: .9; }
+    .settings-cancel { background: transparent; color: var(--muted); }
+    .token-status { font-size: .8rem; padding: 6px 12px; border-radius: 10px; margin-bottom: 14px; }
+    .token-status.ok { background: rgba(46,125,50,.1); color: #2e7d32; }
+    .token-status.missing { background: rgba(204,34,40,.08); color: var(--brand); }
 
     @keyframes shellIn {
       from { opacity: 0; transform: translateY(28px) scale(.985); }
@@ -641,6 +695,68 @@
         <div class="powered"><span class="powered-dot" aria-hidden="true"></span>Powered by Cisco Webex Connect</div>
       </footer>
     </section>
+
+    <button class="settings-gear" onclick="openSettings()" title="WxCC Settings">⚙️</button>
+
+    <div class="settings-overlay" id="settingsOverlay" onclick="if(event.target===this)closeSettings()">
+      <div class="settings-panel">
+        <h3>WxCC Configuration</h3>
+        <p>Configure your Webex Contact Center token and callback settings. These settings are shared across both demo environments.</p>
+        <div class="token-status missing" id="tokenStatus">No token configured</div>
+        <label for="jdsBaseInput">API Base URL</label>
+        <input id="jdsBaseInput" type="text" placeholder="https://api.wxcc-us1.cisco.com" style="font-family:monospace; font-size:.85rem;">
+        <label for="jdsTokenInput">Bearer Token</label>
+        <textarea id="jdsTokenInput" placeholder="Paste your WxCC Bearer token here..."></textarea>
+        <label for="epIdInput">Entry Point ID</label>
+        <input id="epIdInput" type="text" placeholder="Paste your Outdial Entry Point ID..." style="font-family:monospace; font-size:.85rem;">
+        <div class="settings-actions">
+          <button class="settings-cancel" onclick="closeSettings()">Cancel</button>
+          <button class="settings-save" onclick="saveSettings()">Save</button>
+        </div>
+      </div>
+    </div>
   </main>
+  <script>
+    function openSettings() {
+      var overlay = document.getElementById('settingsOverlay');
+      var tokenInput = document.getElementById('jdsTokenInput');
+      var baseInput = document.getElementById('jdsBaseInput');
+      var epInput = document.getElementById('epIdInput');
+      var status = document.getElementById('tokenStatus');
+
+      tokenInput.value = localStorage.getItem('farmers_jds_token') || '';
+      baseInput.value = localStorage.getItem('farmers_jds_base') || 'https://api.wxcc-us1.cisco.com';
+      epInput.value = localStorage.getItem('farmers_callback_ep') || '';
+
+      if (tokenInput.value) {
+        status.textContent = '✓ Token configured';
+        status.className = 'token-status ok';
+      } else {
+        status.textContent = 'No token configured';
+        status.className = 'token-status missing';
+      }
+      overlay.classList.add('open');
+    }
+
+    function closeSettings() {
+      document.getElementById('settingsOverlay').classList.remove('open');
+    }
+
+    function saveSettings() {
+      var base = document.getElementById('jdsBaseInput').value.trim();
+      if (base) { localStorage.setItem('farmers_jds_base', base); }
+      else { localStorage.removeItem('farmers_jds_base'); }
+
+      var token = document.getElementById('jdsTokenInput').value.trim();
+      if (token) { localStorage.setItem('farmers_jds_token', token); }
+      else { localStorage.removeItem('farmers_jds_token'); }
+
+      var epId = document.getElementById('epIdInput').value.trim();
+      if (epId) { localStorage.setItem('farmers_callback_ep', epId); }
+      else { localStorage.removeItem('farmers_callback_ep'); }
+
+      closeSettings();
+    }
+  </script>
 </body>
 </html>
