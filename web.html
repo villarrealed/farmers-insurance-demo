@@ -3134,7 +3134,6 @@
     let sdkThread = null;
     let sdkConnected = false;
     let formResponseCount = 0;        // Atomic guard: only respond to form ONCE
-    let pendingFormMessage = null;    // Queue form if thread not ready yet
     const sdkUserId = () => (localStorage.getItem('farmers_demo_phone') || '').replace(/\D/g, '');
 
     function initWebexSDK(callback) {
@@ -3227,19 +3226,25 @@
         } catch(e) {}
 
         if (isFormTemplate) {
-          // Already responded or responding — ignore ALL subsequent form templates
+          // Already responded — ignore ALL subsequent form templates
           if (formResponseCount > 0) {
             console.log('[SDK] Ignoring form template (already responded, count=' + formResponseCount + ')');
             return;
           }
 
-          // First form: queue or respond
-          if (sdkThread) {
-            autoRespondToForm(message, formAtt);
+          // CRITICAL: Get the thread from the incoming message — this is the flow's thread
+          var msgThread = null;
+          try { msgThread = message.getThread ? message.getThread() : null; } catch(e) {}
+
+          if (msgThread) {
+            sdkThread = msgThread;
+            console.log('[SDK] Using flow thread:', sdkThread.getId ? sdkThread.getId() : sdkThread);
           } else {
-            pendingFormMessage = { message: message, attachment: formAtt };
-            console.log('[SDK] Form template queued (thread not ready)');
+            console.warn('[SDK] Form message has no thread — cannot respond');
+            return;
           }
+
+          autoRespondToForm(message, formAtt);
           return;
         }
 
@@ -3303,131 +3308,17 @@
         onSuccess: function() {
           console.log('[SDK] Form response accepted by SDK');
           renderSystemMessage('Info submitted — connecting to agent...');
+
+          // Enable chat input now that we have the flow's thread and form is submitted
+          updateChatStatus('connected');
+          document.getElementById('chatSendBtn').disabled = false;
+          document.getElementById('chatInput').focus();
         },
         onFailure: function(errCode, errMsg) {
           console.error('[SDK] Form response publish failed:', errCode, errMsg);
           formResponseCount = 0; // Allow retry on failure
           renderSystemMessage('Failed to submit info. Please try again.');
         }
-      });
-    }
-
-    function flushPendingForm() {
-      if (pendingFormMessage && sdkThread) {
-        console.log('[SDK] Flushing queued form response (thread now ready)');
-        autoRespondToForm(pendingFormMessage.message, pendingFormMessage.attachment);
-        pendingFormMessage = null;
-      }
-    }
-
-    function createSDKThread(callback, formData) {
-      var userId = sdkUserId();
-      var thread = new IMI.ICThread();
-      thread.setTitle('Farmers Support - ' + userId);
-      thread.setStatus(IMI.ICThreadStatus.Active);
-      thread.setType(IMI.ICThreadType.Conversation);
-
-      // Pass pre-chat form data as thread extras (Name + Email required by flow)
-      if (formData) {
-        thread.setExtras({ formData: formData });
-      }
-
-      sdkMessaging.createThread(thread, {
-        onSuccess: function(newThread) {
-          sdkThread = newThread;
-          console.log('[SDK] Thread created:', sdkThread.getId ? sdkThread.getId() : sdkThread);
-          // Flush any queued form response now that thread is ready
-          flushPendingForm();
-          callback(true);
-        },
-        onFailure: function(errCode, errMsg) {
-          console.error('[SDK] Thread creation failed:', errCode, errMsg);
-          // Try to fetch existing threads instead
-          sdkMessaging.fetchThreads(0, 10, {
-            onSuccess: function(threads) {
-              if (threads && threads.length > 0) {
-                sdkThread = threads[0];
-                console.log('[SDK] Using existing thread');
-                flushPendingForm();
-                callback(true);
-              } else {
-                callback(false);
-              }
-            },
-            onFailure: function() { callback(false); }
-          });
-        }
-      });
-    }
-
-    function launchWebexChat() {
-      jdsPostEvent('action:start-chat', {uiData:{title:'Start Chat',iconType:'chat',subTitle:'Initiated live chat with support',filterTags:['chat','action']}});
-
-      var nameVal = (document.getElementById('prechatName').value || '').trim();
-      var emailVal = (document.getElementById('prechatEmail').value || '').trim();
-
-      if (!nameVal || !emailVal || !emailVal.includes('@')) {
-        showToast('Please enter a valid name and email');
-        return;
-      }
-
-      updateChatStatus('connecting');
-      document.getElementById('chat-prechat').style.display = 'none';
-      document.getElementById('chat-active').style.display = 'flex';
-      document.getElementById('chatSendBtn').disabled = true;
-
-      // Clear previous messages
-      document.getElementById('chatMessages').innerHTML = '';
-      renderSystemMessage('Initializing secure connection...');
-
-      initWebexSDK(function(ok) {
-        if (!ok) {
-          updateChatStatus('error');
-          renderSystemMessage('Failed to initialize SDK. Please try again.');
-          return;
-        }
-        renderSystemMessage('Registering user...');
-
-        registerSDKUser(function(ok) {
-          if (!ok) {
-            updateChatStatus('error');
-            renderSystemMessage('Registration failed. Please try again.');
-            return;
-          }
-          renderSystemMessage('Connecting to messaging service...');
-
-          connectSDKMessaging(function(ok) {
-            if (!ok) {
-              // Still attempt thread creation — connection may complete async
-              console.warn('[SDK] Connection may still be establishing...');
-            }
-            renderSystemMessage('Creating chat session...');
-
-            // Pre-chat form data (Name + Email mandatory for agent routing)
-            var formData = { Name: nameVal, Email: emailVal };
-
-            createSDKThread(function(ok) {
-              if (!ok) {
-                updateChatStatus('error');
-                renderSystemMessage('Could not create chat session. Please try again.');
-                return;
-              }
-
-              // Ready to chat
-              updateChatStatus('connected');
-              document.getElementById('chatSendBtn').disabled = false;
-              document.getElementById('chatInput').focus();
-
-              // Clear system messages and show welcome
-              document.getElementById('chatMessages').innerHTML = '';
-              renderSystemMessage('Connected — you\'re chatting with Farmers Support');
-
-              // Send initial context as first message (includes form data as extras)
-              var intro = 'Customer ' + nameVal + ' (' + emailVal + ') has started a chat.';
-              sendSDKMessage(intro, true, formData);
-            }, formData);
-          });
-        });
       });
     }
 
@@ -3441,17 +3332,12 @@
       sendSDKMessage(text, false);
     }
 
-    function sendSDKMessage(text, silent, formData) {
+    function sendSDKMessage(text, silent) {
       if (!sdkMessaging || !sdkThread) return;
       try {
         var message = new IMI.ICMessage();
         message.setMessage(text);
         message.setThread(sdkThread);
-
-        // Attach pre-chat form data as extras on initial message
-        if (formData) {
-          message.setExtras({ formData: formData });
-        }
 
         sdkMessaging.publishMessage(message, {
           onSuccess: function() { console.log('[SDK] Message published'); },
@@ -3502,7 +3388,6 @@
       sdkThread = null;
       sdkConnected = false;
       formResponseCount = 0;
-      pendingFormMessage = null;
 
       document.getElementById('chatSendBtn').disabled = true;
       document.getElementById('chat-prechat').style.display = 'flex';
