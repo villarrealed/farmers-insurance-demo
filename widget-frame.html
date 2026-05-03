@@ -19,9 +19,10 @@
     align-items: center;
     justify-content: center;
     height: 100%;
-    gap: 12px;
+    gap: 14px;
     color: #8e8e93;
-    font-size: 14px;
+    font-size: 13px;
+    font-weight: 500;
   }
   .widget-loading .spinner {
     width: 28px; height: 28px;
@@ -36,8 +37,13 @@
 <body>
 
 <div class="widget-loading" id="widgetLoading">
+  <div style="width:56px;height:56px;border-radius:16px;background:linear-gradient(135deg,#cc2228,#991a1e);display:grid;place-items:center;box-shadow:0 8px 24px rgba(204,34,40,.25);">
+    <svg viewBox="0 0 24 24" width="28" height="28" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </div>
   <div class="spinner"></div>
-  <span>Connecting to agent...</span>
+  <span>Initializing...</span>
 </div>
 
 <div id="divicw"
@@ -48,6 +54,11 @@
 
 <script>
 (function() {
+  // Read name/email from URL params (passed by parent page)
+  var urlParams = new URLSearchParams(window.location.search);
+  var prefillName = urlParams.get('name') || '';
+  var prefillEmail = urlParams.get('email') || '';
+
   // Load the IMI Chat widget (same init as test.html)
   var el = document.getElementById('divicw');
   var script = document.createElement('script');
@@ -122,6 +133,76 @@
     setTimeout(applyFullscreenStyles, 600);
     // Re-apply in case of late rendering
     setTimeout(applyFullscreenStyles, 2000);
+
+    // Auto-fill prechat form fields if name/email were passed
+    if (prefillName || prefillEmail) {
+      setTimeout(function() { autoFillPrechat(); }, 1000);
+    }
+  }
+
+  function autoFillPrechat() {
+    var attempts = 0;
+    var maxAttempts = 20; // 10 seconds max
+
+    function tryFill() {
+      if (attempts >= maxAttempts) return;
+      attempts++;
+
+      // Find input fields in the widget DOM (IMI widget uses standard inputs)
+      var inputs = document.querySelectorAll('input[type="text"], input[type="email"], input:not([type])');
+      var filled = false;
+
+      for (var i = 0; i < inputs.length; i++) {
+        var input = inputs[i];
+        var placeholder = (input.placeholder || '').toLowerCase();
+        var label = '';
+        // Check previous sibling or parent for label text
+        var prev = input.previousElementSibling;
+        if (prev) label = (prev.textContent || '').toLowerCase();
+        var parent = input.closest('label, div, span');
+        if (parent) label = label || (parent.textContent || '').toLowerCase();
+
+        if ((placeholder.includes('name') || label.includes('name')) && prefillName && !input.value) {
+          setNativeValue(input, prefillName);
+          filled = true;
+        } else if ((placeholder.includes('email') || label.includes('email') || input.type === 'email') && prefillEmail && !input.value) {
+          setNativeValue(input, prefillEmail);
+          filled = true;
+        }
+      }
+
+      if (filled) {
+        // Try to click submit/checkmark buttons after filling
+        setTimeout(function() {
+          var buttons = document.querySelectorAll('button, [role="button"], .submit-btn, [class*="submit"], [class*="check"], [class*="Send"]');
+          for (var j = 0; j < buttons.length; j++) {
+            var btn = buttons[j];
+            var svg = btn.querySelector('svg');
+            var text = (btn.textContent || '').toLowerCase();
+            // Look for checkmark-style or send-style buttons (not the main send message button)
+            if (svg || text.includes('✓') || text.includes('submit') || text.includes('start')) {
+              // Only click small action buttons (checkmarks next to inputs)
+              if (btn.offsetWidth < 60 || btn.offsetHeight < 60) {
+                btn.click();
+              }
+            }
+          }
+        }, 300);
+      } else {
+        // Fields not found yet, retry
+        setTimeout(tryFill, 500);
+      }
+    }
+
+    tryFill();
+  }
+
+  // Helper to set value on React/framework-controlled inputs
+  function setNativeValue(element, value) {
+    var valueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+    valueSetter.call(element, value);
+    element.dispatchEvent(new Event('input', { bubbles: true }));
+    element.dispatchEvent(new Event('change', { bubbles: true }));
   }
 
   function applyFullscreenStyles() {

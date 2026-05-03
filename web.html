@@ -3014,7 +3014,10 @@
       active.style.display = 'flex';
 
       const iframe = document.getElementById('chatWidgetFrame');
-      iframe.setAttribute('src', 'widget-frame.html');
+      const params = new URLSearchParams();
+      if (nameVal) params.set('name', nameVal);
+      if (emailVal) params.set('email', emailVal);
+      iframe.setAttribute('src', 'widget-frame.html?' + params.toString());
 
       setTimeout(function() {
         updateChatStatus('connected');
