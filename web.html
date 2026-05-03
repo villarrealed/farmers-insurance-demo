@@ -3133,6 +3133,8 @@
     let sdkMessaging = null;
     let sdkThread = null;
     let sdkConnected = false;
+    let formResponded = false;        // Guard: only auto-respond to form once per session
+    let pendingFormMessage = null;    // Queue form if thread not ready yet
     const sdkUserId = () => (localStorage.getItem('farmers_demo_phone') || '').replace(/\D/g, '');
 
     function initWebexSDK(callback) {
@@ -3209,34 +3211,69 @@
         console.log('[SDK] Message received:', message);
 
         // Check for form template (pre-chat form request from flow)
-        var attachments = message.getAttachments ? message.getAttachments() : null;
-        if (attachments && attachments.length > 0) {
-          for (var i = 0; i < attachments.length; i++) {
-            var att = attachments[i];
-            if (att instanceof IMI.ICFormTemplateAttachment ||
-                (att.getTemplateType && att.getTemplateType() === 'form') ||
-                (att.templateType && att.templateType === 'form')) {
-              autoRespondToForm(message, att);
-              return; // Don't display form template as chat bubble
+        // Only auto-respond ONCE per chat session
+        if (!formResponded) {
+          var attachments = message.getAttachments ? message.getAttachments() : null;
+          if (attachments && attachments.length > 0) {
+            for (var i = 0; i < attachments.length; i++) {
+              var att = attachments[i];
+              if (att instanceof IMI.ICFormTemplateAttachment ||
+                  (att.getTemplateType && att.getTemplateType() === 'form') ||
+                  (att.templateType && att.templateType === 'form')) {
+                formResponded = true; // Set guard BEFORE responding
+                if (sdkThread) {
+                  autoRespondToForm(message, att);
+                } else {
+                  // Thread not ready yet — queue for later
+                  pendingFormMessage = { message: message, attachment: att };
+                  renderSystemMessage('Waiting for session to initialize...');
+                }
+                return; // Don't display form template as chat bubble
+              }
+            }
+          }
+
+          // Also detect form template in raw message body (fallback)
+          var rawText = '';
+          try { rawText = message.getMessage ? message.getMessage() : (message.message || ''); } catch(e) {}
+          if (rawText && rawText.indexOf('"templateType":"form"') !== -1) {
+            try {
+              var parsed = JSON.parse(rawText);
+              if (parsed.templateType === 'form') {
+                formResponded = true;
+                if (sdkThread) {
+                  autoRespondToForm(message, parsed);
+                } else {
+                  pendingFormMessage = { message: message, attachment: parsed };
+                  renderSystemMessage('Waiting for session to initialize...');
+                }
+                return;
+              }
+            } catch(e) {}
+          }
+        } else {
+          // Already responded to form — ignore subsequent form template messages
+          var att2 = message.getAttachments ? message.getAttachments() : null;
+          if (att2 && att2.length > 0) {
+            var isForm = false;
+            for (var j = 0; j < att2.length; j++) {
+              if (att2[j] instanceof IMI.ICFormTemplateAttachment ||
+                  (att2[j].getTemplateType && att2[j].getTemplateType() === 'form') ||
+                  (att2[j].templateType && att2[j].templateType === 'form')) {
+                isForm = true; break;
+              }
+            }
+            if (isForm) {
+              console.log('[SDK] Ignoring duplicate form template (already responded)');
+              return;
             }
           }
         }
 
-        // Also detect form template in raw message body (fallback)
-        var rawText = '';
-        try { rawText = message.getMessage ? message.getMessage() : (message.message || ''); } catch(e) {}
-        if (rawText && rawText.indexOf('"templateType":"form"') !== -1) {
-          try {
-            var parsed = JSON.parse(rawText);
-            if (parsed.templateType === 'form') {
-              autoRespondToForm(message, parsed);
-              return;
-            }
-          } catch(e) {}
-        }
-
         // Normal text message from agent
-        var text = rawText || String(message);
+        var rawText2 = '';
+        try { rawText2 = message.getMessage ? message.getMessage() : (message.message || ''); } catch(e) {}
+        var text = rawText2 || String(message);
         if (text) renderMessage(text, 'agent');
       };
       sdkMessaging.setICMessagingReceiver(receiver);
@@ -3292,6 +3329,14 @@
       });
     }
 
+    function flushPendingForm() {
+      if (pendingFormMessage && sdkThread) {
+        console.log('[SDK] Flushing queued form response (thread now ready)');
+        autoRespondToForm(pendingFormMessage.message, pendingFormMessage.attachment);
+        pendingFormMessage = null;
+      }
+    }
+
     function createSDKThread(callback, formData) {
       var userId = sdkUserId();
       var thread = new IMI.ICThread();
@@ -3308,6 +3353,8 @@
         onSuccess: function(newThread) {
           sdkThread = newThread;
           console.log('[SDK] Thread created:', sdkThread.getId ? sdkThread.getId() : sdkThread);
+          // Flush any queued form response now that thread is ready
+          flushPendingForm();
           callback(true);
         },
         onFailure: function(errCode, errMsg) {
@@ -3318,6 +3365,7 @@
               if (threads && threads.length > 0) {
                 sdkThread = threads[0];
                 console.log('[SDK] Using existing thread');
+                flushPendingForm();
                 callback(true);
               } else {
                 callback(false);
@@ -3470,6 +3518,8 @@
       }
       sdkThread = null;
       sdkConnected = false;
+      formResponded = false;
+      pendingFormMessage = null;
 
       document.getElementById('chatSendBtn').disabled = true;
       document.getElementById('chat-prechat').style.display = 'flex';
