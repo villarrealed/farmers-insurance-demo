@@ -16,7 +16,7 @@ var imiEnvironments = {
             "rtmsdomain": 'rtm-us.imiconnect.io'
         },
         "sw": {
-            "enabled": true,
+            "enabled": false,
             "config": {
                 "messagingSenderId": '',
                 "serverUrl": 'https://rtm-us.imiconnect.io',
