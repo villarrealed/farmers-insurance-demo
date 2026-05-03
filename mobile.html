@@ -902,13 +902,6 @@
     width: 36px; height: 5px; background: #d1d1d6; border-radius: 3px;
     margin: 0 auto 14px;
   }
-  .cb-type-toggle { display: flex; gap: 8px; margin-bottom: 14px; }
-  .cb-type-btn {
-    flex: 1; padding: 12px 8px; border: 2px solid #e5e5ea; border-radius: 14px;
-    background: #fff; font-size: 14px; font-weight: 600; cursor: pointer;
-    transition: all .2s; text-align: center; color: #1c1c1e;
-  }
-  .cb-type-btn.active { border-color: #cc2228; background: #fff5f5; color: #cc2228; }
 </style>
 <script src="assets/js/profiles.js"></script>
 </head>
@@ -1575,11 +1568,6 @@
     <div class="cb-handle"></div>
     <h3 style="margin:0 0 4px;font-size:20px;font-weight:700;color:#1c1c1e;">Request a Callback</h3>
     <p style="margin:0 0 16px;font-size:14px;color:#8e8e93;">We'll call you — no waiting on hold.</p>
-    
-    <div class="cb-type-toggle">
-      <button class="cb-type-btn active" id="cbTypeImmediate" onclick="setCbType('immediate')">📞 Call Me Now</button>
-      <button class="cb-type-btn" id="cbTypeScheduled" onclick="setCbType('scheduled')">📅 Schedule</button>
-    </div>
 
     <label style="font-size:13px;font-weight:600;color:#1c1c1e;display:block;margin-bottom:4px;">Phone Number</label>
     <input id="cbPhone" type="tel" readonly style="width:100%;padding:12px 14px;border:1px solid #d1d1d6;border-radius:12px;font-size:15px;background:#f2f2f7;color:#8e8e93;box-sizing:border-box;margin-bottom:10px;font-family:monospace;">
@@ -1595,13 +1583,6 @@
       <option value="Policy Change">Policy Change</option>
       <option value="Roadside">Roadside Assistance</option>
     </select>
-
-    <div id="cbScheduleFields" style="display:none;">
-      <label style="font-size:13px;font-weight:600;color:#1c1c1e;display:block;margin-bottom:4px;">Date</label>
-      <input id="cbDate" type="date" style="width:100%;padding:12px 14px;border:1px solid #d1d1d6;border-radius:12px;font-size:15px;background:#fff;box-sizing:border-box;margin-bottom:10px;">
-      <label style="font-size:13px;font-weight:600;color:#1c1c1e;display:block;margin-bottom:4px;">Time</label>
-      <input id="cbTime" type="time" value="10:00" style="width:100%;padding:12px 14px;border:1px solid #d1d1d6;border-radius:12px;font-size:15px;background:#fff;box-sizing:border-box;margin-bottom:10px;">
-    </div>
 
     <button id="cbSubmitBtn" onclick="submitCallback()" style="background:linear-gradient(135deg,#cc2228,#991a1e);color:#fff;border:none;border-radius:14px;width:100%;height:50px;font-size:16px;font-weight:700;cursor:pointer;box-shadow:0 4px 16px rgba(204,34,40,.3);margin-top:4px;">
       📞 Call Me Now
@@ -1856,27 +1837,11 @@ function onEmailIDCard() {
 }
 
 // ── Callback Feature ─────────────────────────────
-var currentCbType = 'immediate';
-
-function setCbType(type) {
-  currentCbType = type;
-  document.getElementById('cbTypeImmediate').classList.toggle('active', type === 'immediate');
-  document.getElementById('cbTypeScheduled').classList.toggle('active', type === 'scheduled');
-  document.getElementById('cbScheduleFields').style.display = type === 'scheduled' ? '' : 'none';
-  document.getElementById('cbSubmitBtn').textContent = type === 'immediate' ? '📞 Call Me Now' : '📅 Schedule Callback';
-}
-
 function openCallback() {
   var phone = localStorage.getItem('farmers_demo_phone') || '';
   var name = document.getElementById('prechatName') ? document.getElementById('prechatName').value : '';
   document.getElementById('cbPhone').value = phone;
   document.getElementById('cbName').value = name;
-  var now = new Date();
-  now.setHours(now.getHours() + 1, 0, 0, 0);
-  document.getElementById('cbDate').value = now.toISOString().split('T')[0];
-  document.getElementById('cbDate').min = new Date().toISOString().split('T')[0];
-  document.getElementById('cbTime').value = now.toTimeString().slice(0,5);
-  setCbType('immediate');
   document.getElementById('cbStatus').textContent = '';
   document.getElementById('cbStatus').style.color = '';
   document.getElementById('callbackOverlay').classList.add('open');
@@ -1908,16 +1873,9 @@ function submitCallback() {
     mediaType: 'telephony',
     callback: {
       callbackOrigin: 'web',
-      callbackType: currentCbType
+      callbackType: 'immediate'
     }
   };
-  
-  if (currentCbType === 'scheduled') {
-    var d = document.getElementById('cbDate').value;
-    var t = document.getElementById('cbTime').value;
-    if (!d || !t) { showToast('Please select a date and time'); return; }
-    body.callback.callbackTime = new Date(d + 'T' + t).toISOString();
-  }
   
   var statusEl = document.getElementById('cbStatus');
   statusEl.textContent = 'Requesting callback...';
@@ -1934,19 +1892,17 @@ function submitCallback() {
     return r.text().then(function(t) { throw new Error('HTTP ' + r.status + ': ' + t); });
   })
   .then(function(data) {
-    statusEl.textContent = currentCbType === 'immediate' 
-      ? '✓ Your phone will ring shortly!' 
-      : '✓ Callback scheduled!';
+    statusEl.textContent = '✓ Your phone will ring shortly!';
     statusEl.style.color = '#34c759';
-    showToast(currentCbType === 'immediate' ? 'Your phone will ring shortly!' : 'Callback scheduled!');
+    showToast('Your phone will ring shortly!');
     jdsPostEvent('action:request-callback', {
       uiData: {
         title: 'Request Callback',
         iconType: 'callback',
-        subTitle: (currentCbType === 'immediate' ? 'Requested immediate callback' : 'Scheduled callback'),
+        subTitle: 'Requested callback',
         filterTags: ['callback', 'action']
       },
-      callbackType: currentCbType,
+      callbackType: 'immediate',
       reason: reason
     });
     setTimeout(closeCallback, 2500);
