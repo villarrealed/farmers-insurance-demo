@@ -3218,12 +3218,17 @@
       setTimeout(function() { callback(sdkConnected); }, 1500);
     }
 
-    function createSDKThread(callback) {
+    function createSDKThread(callback, formData) {
       var userId = sdkUserId();
       var thread = new IMI.ICThread();
       thread.setTitle('Farmers Support - ' + userId);
       thread.setStatus(IMI.ICThreadStatus.Active);
       thread.setType(IMI.ICThreadType.Conversation);
+
+      // Pass pre-chat form data as thread extras (Name + Email required by flow)
+      if (formData) {
+        thread.setExtras({ formData: formData });
+      }
 
       sdkMessaging.createThread(thread, {
         onSuccess: function(newThread) {
@@ -3293,6 +3298,9 @@
             }
             renderSystemMessage('Creating chat session...');
 
+            // Pre-chat form data (Name + Email mandatory for agent routing)
+            var formData = { Name: nameVal, Email: emailVal };
+
             createSDKThread(function(ok) {
               if (!ok) {
                 updateChatStatus('error');
@@ -3309,10 +3317,10 @@
               document.getElementById('chatMessages').innerHTML = '';
               renderSystemMessage('Connected — you\'re chatting with Farmers Support');
 
-              // Send initial context as first message (silent, includes name/email)
+              // Send initial context as first message (includes form data as extras)
               var intro = 'Customer ' + nameVal + ' (' + emailVal + ') has started a chat.';
-              sendSDKMessage(intro, true);
-            });
+              sendSDKMessage(intro, true, formData);
+            }, formData);
           });
         });
       });
@@ -3328,12 +3336,18 @@
       sendSDKMessage(text, false);
     }
 
-    function sendSDKMessage(text, silent) {
+    function sendSDKMessage(text, silent, formData) {
       if (!sdkMessaging || !sdkThread) return;
       try {
         var message = new IMI.ICMessage();
         message.setMessage(text);
         message.setThread(sdkThread);
+
+        // Attach pre-chat form data as extras on initial message
+        if (formData) {
+          message.setExtras({ formData: formData });
+        }
+
         sdkMessaging.publishMessage(message, {
           onSuccess: function() { console.log('[SDK] Message published'); },
           onFailure: function(errCode, errMsg) {
