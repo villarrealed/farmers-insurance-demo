@@ -3144,14 +3144,28 @@
         'assets/js/imi-environments.js',
         'assets/js/webex-connect-sdk.min.js'
       ], function() {
-        try {
-          IMI.IMIconnect.startup(imiEnvironments);
-          sdkReady = true;
-          console.log('[SDK] Startup complete');
-          callback(true);
-        } catch(e) {
-          console.error('[SDK] Startup failed:', e);
-          callback(false);
+        // Unregister any stale service workers before SDK startup
+        var doStartup = function() {
+          try {
+            IMI.IMIconnect.startup(imiEnvironments);
+            sdkReady = true;
+            console.log('[SDK] Startup complete');
+            callback(true);
+          } catch(e) {
+            console.error('[SDK] Startup failed:', e);
+            callback(false);
+          }
+        };
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.getRegistrations().then(function(regs) {
+            var tasks = regs.map(function(r) { console.log('[SDK] Unregistering stale SW:', r.scope); return r.unregister(); });
+            Promise.all(tasks).then(function() {
+              console.log('[SDK] Stale SWs cleared, starting SDK');
+              doStartup();
+            });
+          }).catch(function() { doStartup(); });
+        } else {
+          doStartup();
         }
       });
     }
