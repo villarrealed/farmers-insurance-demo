@@ -3133,7 +3133,7 @@
     let sdkMessaging = null;
     let sdkThread = null;
     let sdkConnected = false;
-    let formResponded = false;        // Guard: only auto-respond to form once per session
+    let formResponseCount = 0;        // Atomic guard: only respond to form ONCE
     let pendingFormMessage = null;    // Queue form if thread not ready yet
     const sdkUserId = () => (localStorage.getItem('farmers_demo_phone') || '').replace(/\D/g, '');
 
@@ -3210,70 +3210,42 @@
       receiver.onMessageReceived = function(message) {
         console.log('[SDK] Message received:', message);
 
-        // Check for form template (pre-chat form request from flow)
-        // Only auto-respond ONCE per chat session
-        if (!formResponded) {
-          var attachments = message.getAttachments ? message.getAttachments() : null;
-          if (attachments && attachments.length > 0) {
-            for (var i = 0; i < attachments.length; i++) {
-              var att = attachments[i];
-              if (att instanceof IMI.ICFormTemplateAttachment ||
-                  (att.getTemplateType && att.getTemplateType() === 'form') ||
-                  (att.templateType && att.templateType === 'form')) {
-                formResponded = true; // Set guard BEFORE responding
-                if (sdkThread) {
-                  autoRespondToForm(message, att);
-                } else {
-                  // Thread not ready yet — queue for later
-                  pendingFormMessage = { message: message, attachment: att };
-                  renderSystemMessage('Waiting for session to initialize...');
-                }
-                return; // Don't display form template as chat bubble
-              }
+        // Detect form template messages (have attachments with templateType "form")
+        var isFormTemplate = false;
+        var formAtt = null;
+        try {
+          var attachments = message.getAttachments ? message.getAttachments() : [];
+          for (var i = 0; i < (attachments || []).length; i++) {
+            var a = attachments[i];
+            if ((a.templateType && a.templateType === 'form') ||
+                (a.getTemplateType && a.getTemplateType() === 'form')) {
+              isFormTemplate = true;
+              formAtt = a;
+              break;
             }
+          }
+        } catch(e) {}
+
+        if (isFormTemplate) {
+          // Already responded or responding — ignore ALL subsequent form templates
+          if (formResponseCount > 0) {
+            console.log('[SDK] Ignoring form template (already responded, count=' + formResponseCount + ')');
+            return;
           }
 
-          // Also detect form template in raw message body (fallback)
-          var rawText = '';
-          try { rawText = message.getMessage ? message.getMessage() : (message.message || ''); } catch(e) {}
-          if (rawText && rawText.indexOf('"templateType":"form"') !== -1) {
-            try {
-              var parsed = JSON.parse(rawText);
-              if (parsed.templateType === 'form') {
-                formResponded = true;
-                if (sdkThread) {
-                  autoRespondToForm(message, parsed);
-                } else {
-                  pendingFormMessage = { message: message, attachment: parsed };
-                  renderSystemMessage('Waiting for session to initialize...');
-                }
-                return;
-              }
-            } catch(e) {}
+          // First form: queue or respond
+          if (sdkThread) {
+            autoRespondToForm(message, formAtt);
+          } else {
+            pendingFormMessage = { message: message, attachment: formAtt };
+            console.log('[SDK] Form template queued (thread not ready)');
           }
-        } else {
-          // Already responded to form — ignore subsequent form template messages
-          var att2 = message.getAttachments ? message.getAttachments() : null;
-          if (att2 && att2.length > 0) {
-            var isForm = false;
-            for (var j = 0; j < att2.length; j++) {
-              if (att2[j] instanceof IMI.ICFormTemplateAttachment ||
-                  (att2[j].getTemplateType && att2[j].getTemplateType() === 'form') ||
-                  (att2[j].templateType && att2[j].templateType === 'form')) {
-                isForm = true; break;
-              }
-            }
-            if (isForm) {
-              console.log('[SDK] Ignoring duplicate form template (already responded)');
-              return;
-            }
-          }
+          return;
         }
 
         // Normal text message from agent
-        var rawText2 = '';
-        try { rawText2 = message.getMessage ? message.getMessage() : (message.message || ''); } catch(e) {}
-        var text = rawText2 || String(message);
+        var text = '';
+        try { text = message.getMessage ? message.getMessage() : ''; } catch(e) {}
         if (text) renderMessage(text, 'agent');
       };
       sdkMessaging.setICMessagingReceiver(receiver);
@@ -3284,6 +3256,13 @@
     }
 
     function autoRespondToForm(originalMessage, formAttachment) {
+      // ATOMIC GUARD — only ever respond once, no matter how many code paths call this
+      if (formResponseCount > 0) {
+        console.log('[SDK] autoRespondToForm blocked (count=' + formResponseCount + ')');
+        return;
+      }
+      formResponseCount++;
+      console.log('[SDK] Submitting form response (attempt #' + formResponseCount + ')');
       renderSystemMessage('Submitting your information...');
 
       var nameVal = (document.getElementById('prechatName').value || '').trim();
@@ -3303,12 +3282,13 @@
       if (tid) interactiveData.setRelatedTransactionId(tid);
       interactiveData.setSubmittedAt(new Date().toISOString());
 
-      // Payload with filled form fields matching the template structure
+      // Payload: match original form template structure with values filled in
       interactiveData.setPayload({
         fields: [
-          { name: 'Name', type: 'name', label: 'Name', value: nameVal },
-          { name: 'email', type: 'email', label: 'Email', value: emailVal }
+          { name: 'Name', type: 'name', label: 'Name', value: nameVal, description: '', mandatory: true },
+          { name: 'email', type: 'email', label: 'Email', value: emailVal, description: '', mandatory: true }
         ],
+        title: 'Live Chat',
         templateId: templateId || '49TMSMNT0W'
       });
 
@@ -3317,13 +3297,16 @@
       response.setThread(sdkThread);
       response.setInteractiveData(interactiveData);
 
+      console.log('[SDK] Form response payload:', JSON.stringify(interactiveData.toJSON()));
+
       sdkMessaging.publishMessage(response, {
         onSuccess: function() {
-          console.log('[SDK] Form response submitted');
+          console.log('[SDK] Form response accepted by SDK');
           renderSystemMessage('Info submitted — connecting to agent...');
         },
         onFailure: function(errCode, errMsg) {
-          console.error('[SDK] Form response failed:', errCode, errMsg);
+          console.error('[SDK] Form response publish failed:', errCode, errMsg);
+          formResponseCount = 0; // Allow retry on failure
           renderSystemMessage('Failed to submit info. Please try again.');
         }
       });
@@ -3518,7 +3501,7 @@
       }
       sdkThread = null;
       sdkConnected = false;
-      formResponded = false;
+      formResponseCount = 0;
       pendingFormMessage = null;
 
       document.getElementById('chatSendBtn').disabled = true;
