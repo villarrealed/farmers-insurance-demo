@@ -516,6 +516,11 @@
     .token-status { font-size: .8rem; padding: 6px 12px; border-radius: 10px; margin-bottom: 14px; }
     .token-status.ok { background: rgba(46,125,50,.1); color: #2e7d32; }
     .token-status.missing { background: rgba(204,34,40,.08); color: var(--brand); }
+    .settings-panel textarea.masked {
+      user-select: none; -webkit-user-select: none;
+      color: var(--muted); letter-spacing: .3px; cursor: pointer;
+    }
+    .token-hint { font-size: .78rem; color: var(--muted); margin-top: 4px; margin-bottom: 4px; min-height: 18px; }
 
     @keyframes shellIn {
       from { opacity: 0; transform: translateY(28px) scale(.985); }
@@ -706,7 +711,11 @@
         <label for="jdsBaseInput">API Base URL</label>
         <input id="jdsBaseInput" type="text" placeholder="https://api.wxcc-us1.cisco.com" style="font-family:monospace; font-size:.85rem;">
         <label for="jdsTokenInput">Bearer Token</label>
-        <textarea id="jdsTokenInput" placeholder="Paste your WxCC Bearer token here..."></textarea>
+        <textarea id="jdsTokenInput" placeholder="Paste your WxCC Bearer token here..."
+          oncopy="return false" oncut="return false" ondragstart="return false"
+          onselect="if(this.classList.contains('masked')){this.selectionStart=this.selectionEnd;}"
+        ></textarea>
+        <div class="token-hint" id="tokenHint"></div>
         <label for="epIdInput">Entry Point ID</label>
         <input id="epIdInput" type="text" placeholder="Paste your Outdial Entry Point ID..." style="font-family:monospace; font-size:.85rem;">
         <div class="settings-actions">
@@ -717,26 +726,74 @@
     </div>
   </main>
   <script>
+    var tokenMasked = false;
+
+    function maskToken(token) {
+      if (!token || token.length < 12) return '••••••••';
+      return token.substring(0, 6) + '••••••••••••' + token.substring(token.length - 4);
+    }
+
     function openSettings() {
       var overlay = document.getElementById('settingsOverlay');
       var tokenInput = document.getElementById('jdsTokenInput');
       var baseInput = document.getElementById('jdsBaseInput');
       var epInput = document.getElementById('epIdInput');
       var status = document.getElementById('tokenStatus');
+      var hint = document.getElementById('tokenHint');
 
-      tokenInput.value = localStorage.getItem('farmers_jds_token') || '';
+      var token = localStorage.getItem('farmers_jds_token') || '';
       baseInput.value = localStorage.getItem('farmers_jds_base') || 'https://api.wxcc-us1.cisco.com';
       epInput.value = localStorage.getItem('farmers_callback_ep') || '';
 
-      if (tokenInput.value) {
+      if (token) {
+        tokenInput.value = maskToken(token);
+        tokenInput.classList.add('masked');
+        tokenMasked = true;
+        hint.textContent = 'Click to replace token · Copy disabled';
         status.textContent = '✓ Token configured';
         status.className = 'token-status ok';
       } else {
+        tokenInput.value = '';
+        tokenInput.classList.remove('masked');
+        tokenMasked = false;
+        hint.textContent = '';
         status.textContent = 'No token configured';
         status.className = 'token-status missing';
       }
       overlay.classList.add('open');
     }
+
+    // When user clicks the masked token field, clear it for new input
+    document.addEventListener('DOMContentLoaded', function() {
+      var tokenInput = document.getElementById('jdsTokenInput');
+
+      tokenInput.addEventListener('focus', function() {
+        if (tokenMasked) {
+          tokenInput.value = '';
+          tokenInput.classList.remove('masked');
+          tokenMasked = false;
+          document.getElementById('tokenHint').textContent = 'Paste your new token';
+          tokenInput.placeholder = 'Paste your new WxCC Bearer token here...';
+        }
+      });
+
+      // Block keyboard copy (Ctrl+C / Cmd+C) and select-all when masked
+      tokenInput.addEventListener('keydown', function(e) {
+        if (tokenInput.classList.contains('masked')) {
+          // Block Ctrl/Cmd+C, Ctrl/Cmd+A, Ctrl/Cmd+X
+          if ((e.ctrlKey || e.metaKey) && (e.key === 'c' || e.key === 'a' || e.key === 'x')) {
+            e.preventDefault();
+          }
+        }
+      });
+
+      // Block context menu on the token field
+      tokenInput.addEventListener('contextmenu', function(e) {
+        if (tokenInput.classList.contains('masked')) {
+          e.preventDefault();
+        }
+      });
+    });
 
     function closeSettings() {
       document.getElementById('settingsOverlay').classList.remove('open');
@@ -747,9 +804,17 @@
       if (base) { localStorage.setItem('farmers_jds_base', base); }
       else { localStorage.removeItem('farmers_jds_base'); }
 
-      var token = document.getElementById('jdsTokenInput').value.trim();
-      if (token) { localStorage.setItem('farmers_jds_token', token); }
-      else { localStorage.removeItem('farmers_jds_token'); }
+      var tokenVal = document.getElementById('jdsTokenInput').value.trim();
+      // Only update token if user entered a new value (not masked display)
+      if (tokenVal && !tokenVal.includes('••••')) {
+        localStorage.setItem('farmers_jds_token', tokenVal);
+      } else if (!tokenVal) {
+        // User cleared the field intentionally — only remove if they focused and cleared
+        // (If they never touched it, tokenMasked would still be true from open)
+        if (!tokenMasked) {
+          localStorage.removeItem('farmers_jds_token');
+        }
+      }
 
       var epId = document.getElementById('epIdInput').value.trim();
       if (epId) { localStorage.setItem('farmers_callback_ep', epId); }
