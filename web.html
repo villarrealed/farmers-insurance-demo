@@ -474,8 +474,6 @@
   .settings-card,
   .claim-card,
   .detail-card,
-  .chat-side,
-  .chat-main,
   .payment-banner {
     background: var(--surface);
     border: 1px solid rgba(255,255,255,.7);
@@ -523,7 +521,6 @@
   .claim-cta,
   .pay-btn,
   .toggle-btn,
-  .chat-launch,
   .assist-row {
     transition: transform .2s ease, box-shadow .2s ease, background .2s ease, border-color .2s ease;
   }
@@ -531,7 +528,6 @@
   .btn,
   .btn-secondary,
   .pay-btn,
-  .chat-launch,
   .claim-cta {
     border: none;
     cursor: pointer;
@@ -542,7 +538,6 @@
 
   .btn,
   .pay-btn,
-  .chat-launch,
   .claim-cta {
     background: #fff;
     color: var(--brand);
@@ -557,7 +552,6 @@
   .claim-card:hover,
   .claim-cta:hover,
   .pay-btn:hover,
-  .chat-launch:hover,
   .assist-row:hover {
     transform: translateY(-2px);
   }
@@ -756,8 +750,7 @@
   .policy-layout,
   .payments-layout,
   .claims-layout,
-  .profile-layout,
-  .chat-layout {
+  .profile-layout {
     display: grid;
     gap: 22px;
   }
@@ -766,7 +759,6 @@
   .payments-layout { grid-template-columns: .92fr 1.08fr; }
   .claims-layout { grid-template-columns: 1.05fr .95fr; }
   .profile-layout { grid-template-columns: 380px 1fr; }
-  .chat-layout { grid-template-columns: 380px 1fr; }
 
   .policy-hero {
     padding: 28px;
@@ -1017,32 +1009,6 @@
     font-size: 1.15rem;
   }
 
-  .chat-side,
-  .chat-main { padding: 24px; }
-
-  .chat-status {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    margin-top: 14px;
-    color: var(--muted);
-    font-size: .92rem;
-  }
-
-  .status-dot {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    background: #47c970;
-    box-shadow: 0 0 0 4px rgba(71,201,112,.12);
-  }
-
-  .chat-fields {
-    display: grid;
-    gap: 14px;
-    margin: 22px 0 18px;
-  }
-
   label {
     display: block;
     font-size: .82rem;
@@ -1070,13 +1036,6 @@
     box-shadow: 0 0 0 4px rgba(204,34,40,.08);
   }
 
-  .chat-launch {
-    width: 100%;
-    background: linear-gradient(135deg, #049fd9 0%, #005cde 100%);
-    color: #fff;
-    box-shadow: 0 18px 34px rgba(4,159,217,.22);
-  }
-
   .powered-badge {
     display: inline-flex;
     align-items: center;
@@ -1097,210 +1056,6 @@
     font-size: .72rem;
     font-weight: 800;
   }
-
-  .chat-main {
-    min-height: 620px;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-  }
-
-  .chat-pre,
-  .chat-active {
-    flex: 1;
-    min-height: 0;
-  }
-
-  .chat-pre {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    text-align: center;
-    gap: 16px;
-    padding: 24px;
-    background: linear-gradient(180deg, #fbfcff 0%, #f4f6fb 100%);
-    border-radius: 20px;
-    border: 1px dashed #d8deeb;
-  }
-
-  .chat-illustration {
-    width: 88px;
-    height: 88px;
-    border-radius: 26px;
-    display: grid;
-    place-items: center;
-    font-size: 2.4rem;
-    background: linear-gradient(135deg, #049fd9 0%, #005cde 100%);
-    color: #fff;
-    box-shadow: 0 18px 34px rgba(4,159,217,.22);
-  }
-
-  .chat-active {
-    display: none;
-    flex-direction: column;
-    gap: 0;
-    height: 100%;
-    border-radius: 20px;
-    border: 1px solid var(--line);
-    overflow: hidden;
-    background: #fff;
-  }
-
-  .chat-toolbar {
-    display: flex;
-    justify-content: space-between;
-    gap: 12px;
-    align-items: center;
-    padding: 14px 18px;
-    border-bottom: 1px solid var(--line);
-    background: #fff;
-    border-radius: 20px 20px 0 0;
-  }
-
-  .chat-exit {
-    border: 1px solid var(--line);
-    background: #fff;
-    color: var(--ink);
-    padding: 10px 14px;
-    border-radius: 14px;
-    font-weight: 700;
-    cursor: pointer;
-    white-space: nowrap;
-  }
-  .chat-exit:hover { background: #f5f5f5; }
-
-  /* SDK Chat Messages */
-  .chat-messages {
-    flex: 1;
-    min-height: 0;
-    overflow-y: auto;
-    padding: 20px 18px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    background: linear-gradient(180deg, #f8f9fc 0%, #f2f4f8 100%);
-  }
-
-  .chat-msg {
-    display: flex;
-    flex-direction: column;
-    max-width: 78%;
-    animation: chatFadeIn 0.25s ease;
-  }
-  @keyframes chatFadeIn {
-    from { opacity: 0; transform: translateY(6px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-
-  .chat-msg-user {
-    align-self: flex-end;
-    align-items: flex-end;
-  }
-
-  .chat-msg-agent {
-    align-self: flex-start;
-    align-items: flex-start;
-  }
-
-  .chat-bubble {
-    padding: 11px 16px;
-    border-radius: 18px;
-    font-size: .925rem;
-    line-height: 1.45;
-    word-break: break-word;
-  }
-
-  .chat-bubble-user {
-    background: linear-gradient(135deg, #cc2228, #a11c20);
-    color: #fff;
-    border-bottom-right-radius: 6px;
-  }
-
-  .chat-bubble-agent {
-    background: #fff;
-    color: var(--ink);
-    border: 1px solid var(--line);
-    border-bottom-left-radius: 6px;
-  }
-
-  .chat-msg-meta {
-    font-size: .72rem;
-    color: #8e8e93;
-    margin-top: 3px;
-    padding: 0 4px;
-  }
-
-  .chat-typing {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    padding: 12px 16px;
-    align-self: flex-start;
-  }
-  .chat-typing span {
-    width: 7px; height: 7px;
-    border-radius: 50%;
-    background: #bbb;
-    animation: typingDot 1.2s infinite;
-  }
-  .chat-typing span:nth-child(2) { animation-delay: 0.2s; }
-  .chat-typing span:nth-child(3) { animation-delay: 0.4s; }
-  @keyframes typingDot {
-    0%, 60%, 100% { opacity: .3; transform: scale(.8); }
-    30% { opacity: 1; transform: scale(1); }
-  }
-
-  .chat-system-msg {
-    text-align: center;
-    font-size: .8rem;
-    color: #8e8e93;
-    padding: 6px 0;
-  }
-
-  /* Chat Input Area */
-  .chat-input-area {
-    display: flex;
-    gap: 8px;
-    padding: 12px 14px;
-    border-top: 1px solid var(--line);
-    background: #fff;
-    border-radius: 0 0 20px 20px;
-    align-items: center;
-  }
-
-  .chat-input {
-    flex: 1;
-    border: 1px solid var(--line);
-    border-radius: 22px;
-    padding: 11px 18px;
-    font-size: .925rem;
-    font-family: inherit;
-    outline: none;
-    transition: border-color .15s;
-  }
-  .chat-input:focus {
-    border-color: #cc2228;
-    box-shadow: 0 0 0 3px rgba(204,34,40,.08);
-  }
-
-  .chat-send {
-    width: 42px;
-    height: 42px;
-    border-radius: 50%;
-    border: none;
-    background: linear-gradient(135deg, #cc2228, #a11c20);
-    color: #fff;
-    font-size: 1.1rem;
-    cursor: pointer;
-    display: grid;
-    place-items: center;
-    flex-shrink: 0;
-    transition: transform .1s, opacity .15s;
-  }
-  .chat-send:hover { transform: scale(1.06); }
-  .chat-send:active { transform: scale(0.95); }
-  .chat-send:disabled { opacity: .4; cursor: default; transform: none; }
 
   .modal {
     position: fixed;
@@ -1408,8 +1163,7 @@
     .policy-layout,
     .payments-layout,
     .claims-layout,
-    .profile-layout,
-    .chat-layout {
+    .profile-layout {
       grid-template-columns: 1fr;
     }
 
@@ -1429,8 +1183,6 @@
     .summary-panel,
     .card,
     .detail-card,
-    .chat-side,
-    .chat-main,
     .profile-card,
     .settings-card,
     .payment-banner { padding: 20px; }
@@ -1461,9 +1213,7 @@
     .breakdown-row,
     .settings-row,
     .assist-row,
-    .chat-toolbar { flex-direction: column; align-items: flex-start; }
-    .chat-main { min-height: 520px; }
-    .chat-frame-wrap { min-height: 420px; }
+
     .modal { padding: 14px; }
     .modal-card { padding: 20px; }
     .hide-mobile { display: none; }
@@ -1729,7 +1479,7 @@
                   <strong>Claims support line</strong>
                   <div class="list-note">Available 24/7</div>
                 </div>
-                <strong>1-800-435-7764</strong>
+                <strong>(262) 214-9290</strong>
               </div>
             </div>
           </aside>
@@ -1846,12 +1596,12 @@
               </div>
               <strong>Open</strong>
             </button>
-            <button class="assist-row" type="button" onclick="showToast('Calling 1-800-435-7764...')">
+            <button class="assist-row" type="button" onclick="showToast('Calling (262) 214-9290...')">
               <div class="settings-copy">
                 <div class="row-icon" style="background:#e8f7ea;">📞</div>
                 <div>
                   <strong>Claims & Service Line</strong>
-                  <div class="list-note">1-800-435-7764 · 24/7 support</div>
+                  <div class="list-note">(262) 214-9290 · 24/7 support</div>
                 </div>
               </div>
               <strong>Call</strong>
@@ -2006,7 +1756,7 @@
             <p class="lead" style="font-size:.98rem;">Our claims specialists are available 24/7 to guide you through repair estimates, documentation, and next steps.</p>
             <button class="claim-cta" type="button" onclick="navigateTo('chat')">Contact Claims Support</button>
             <div class="detail-list" style="margin-top:22px;">
-              <div class="detail-row"><span>Claims hotline</span><strong>1-800-435-7764</strong></div>
+              <div class="detail-row"><span>Claims hotline</span><strong>(262) 214-9290</strong></div>
               <div class="detail-row"><span>Average response</span><strong>Under 5 minutes</strong></div>
               <div class="detail-row"><span>Document upload</span><strong>Available in live chat</strong></div>
             </div>
@@ -2089,52 +1839,38 @@
           </div>
         </div>
 
-        <div class="chat-layout">
-          <aside class="chat-side">
-            <div class="eyebrow">Contact support</div>
-            <h2>Farmers Support</h2>
-            <div class="chat-status">
-              <span class="status-dot" id="chatStatusDot"></span>
-              <span id="chatStatusText">Ready · Cisco Webex Contact Center</span>
-            </div>
-
-            <div class="chat-fields">
+        <div class="section-grid">
+          <div class="card">
+            <div class="card-head">
               <div>
-                <label for="prechatName">Name</label>
-                <input id="prechatName" type="text" value="Ed Villarreal">
-              </div>
-              <div>
-                <label for="prechatEmail">Email</label>
-                <input id="prechatEmail" type="email" value="ed.villarreal@farmers.com">
+                <div class="eyebrow">Get in touch</div>
+                <h2>Choose how to connect</h2>
               </div>
             </div>
 
-            <button class="chat-launch" type="button" id="startChatBtn" onclick="launchWebexChat()">Start Live Chat</button>
+            <div style="display:grid; gap:12px;">
+              <button class="assist-row" type="button" onclick="showToast('Opening chat widget...')">
+                <div class="settings-copy">
+                  <div class="row-icon" style="background:#e7f1ff;">💬</div>
+                  <div>
+                    <strong>Live Chat</strong>
+                    <div class="list-note">Chat with a support agent in real time</div>
+                  </div>
+                </div>
+                <strong>Open</strong>
+              </button>
 
-            <div class="powered-badge">
-              <span class="powered-mark">C</span>
-              Powered by Cisco Webex Contact Center
-            </div>
-
-            <div style="margin-top:24px; display:grid; gap:10px;">
-              <button class="assist-row" type="button" onclick="showToast('Calling 1-800-435-7764...')">
+              <a class="assist-row" href="tel:+12622149290" style="text-decoration:none; color:inherit;">
                 <div class="settings-copy">
                   <div class="row-icon" style="background:#e8f7ea;">📞</div>
                   <div>
-                    <strong>1-800-435-7764</strong>
-                    <div class="list-note">24/7 Claims & Service</div>
+                    <strong>Call Us — (262) 214-9290</strong>
+                    <div class="list-note">24/7 claims &amp; service support</div>
                   </div>
                 </div>
-              </button>
-              <button class="assist-row" type="button" onclick="showToast('Opening email...')">
-                <div class="settings-copy">
-                  <div class="row-icon" style="background:#eef1f8;">✉️</div>
-                  <div>
-                    <strong>Send a Message</strong>
-                    <div class="list-note">Response within 24 hours</div>
-                  </div>
-                </div>
-              </button>
+                <strong>Call</strong>
+              </a>
+
               <button class="assist-row" type="button" onclick="openCallback()" style="background:#fff5f5;">
                 <div class="settings-copy">
                   <div class="row-icon" style="background:#fff0f0;">🔔</div>
@@ -2143,33 +1879,43 @@
                     <div class="list-note">We'll call you — no hold time</div>
                   </div>
                 </div>
+                <strong>Request</strong>
+              </button>
+
+              <button class="assist-row" type="button" onclick="showToast('Opening email...')">
+                <div class="settings-copy">
+                  <div class="row-icon" style="background:#eef1f8;">✉️</div>
+                  <div>
+                    <strong>Send a Message</strong>
+                    <div class="list-note">Response within 24 hours</div>
+                  </div>
+                </div>
+                <strong>Send</strong>
               </button>
             </div>
-          </aside>
+          </div>
 
-          <div class="chat-main">
-            <div class="chat-pre" id="chat-prechat">
-              <div class="chat-illustration">💬</div>
-              <h2>Live Chat Support</h2>
-              <p class="lead" style="max-width:42ch; margin:0;">Click <strong>Start Live Chat</strong> to connect with a support agent in real time.</p>
+          <div class="card">
+            <div class="card-head">
+              <div>
+                <div class="eyebrow">About our support</div>
+                <h2>Powered by Cisco Webex</h2>
+              </div>
             </div>
 
-            <div class="chat-active" id="chat-active">
-              <div class="chat-toolbar">
-                <div>
-                  <strong>Live Chat</strong>
-                  <div class="list-note" id="chatAgentInfo">Connected via Webex Connect</div>
-                </div>
-                <button class="chat-exit" type="button" onclick="exitChat()">End Chat</button>
+            <div style="display:grid; gap:18px;">
+              <p class="lead" style="max-width:none;">Your support experience is powered by Cisco Webex Contact Center — enterprise-grade voice, chat, and digital channels working together for seamless service.</p>
+
+              <div class="detail-list">
+                <div class="detail-row"><span>Live Chat</span><strong>Webex Connect SDK</strong></div>
+                <div class="detail-row"><span>Voice</span><strong>Webex Contact Center</strong></div>
+                <div class="detail-row"><span>Callback</span><strong>WxCC Task API</strong></div>
+                <div class="detail-row"><span>Customer Data</span><strong>Journey Data Service</strong></div>
               </div>
-              <div class="chat-messages" id="chatMessages">
-                <!-- Messages rendered dynamically by SDK -->
-              </div>
-              <div class="chat-input-area">
-                <input type="text" class="chat-input" id="chatInput" placeholder="Type a message..." autocomplete="off">
-                <button class="chat-send" type="button" id="chatSendBtn" onclick="sendChatMessage()" disabled>
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M22 2L11 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M22 2L15 22L11 13L2 9L22 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                </button>
+
+              <div class="powered-badge">
+                <span class="powered-mark">C</span>
+                Powered by Cisco Webex Contact Center
               </div>
             </div>
           </div>
@@ -2264,11 +2010,11 @@
                 </div>
                 <span>›</span>
               </button>
-              <button class="settings-row" type="button" onclick="showToast('Calling 1-800-435-7764...')">
+              <button class="settings-row" type="button" onclick="showToast('Calling (262) 214-9290...')">
                 <div class="settings-copy">
                   <div class="row-icon" style="background:#e8f7ea;">📞</div>
                   <div>
-                    <strong>Call Farmers — 1-800-435-7764</strong>
+                    <strong>Call Farmers — (262) 214-9290</strong>
                     <div class="list-note">24/7 claims and service</div>
                   </div>
                 </div>
@@ -2335,7 +2081,7 @@
           <div><div class="id-label">Effective</div><div class="id-value">05/14/2025</div></div>
           <div><div class="id-label">Expires</div><div class="id-value">11/14/2025</div></div>
         </div>
-        <div class="id-label" style="margin-top:18px;">Farmers Insurance Exchange · Farmers Group, Inc. · Zurich, Farmers New World Life · Claims 24/7: 1-800-435-7764</div>
+        <div class="id-label" style="margin-top:18px;">Farmers Insurance Exchange · Farmers Group, Inc. · Zurich, Farmers New World Life · Claims 24/7: (262) 214-9290</div>
       </div>
 
       <div class="modal-actions">
@@ -2717,7 +2463,7 @@
       if (summaryRows.length >= 3) {
         summaryRows[0].innerHTML = '<div><strong>6-month premium</strong><div class="list-note">Current term total</div></div><strong>' + p.policy.premium6Mo + '</strong>';
         summaryRows[1].innerHTML = '<div><strong>AutoPay</strong><div class="list-note">' + p.payment.cardShort + '</div></div><span class="badge info">Enrolled</span>';
-        summaryRows[2].innerHTML = '<div><strong>Claims support line</strong><div class="list-note">Available 24/7</div></div><strong>1-800-435-7764</strong>';
+        summaryRows[2].innerHTML = '<div><strong>Claims support line</strong><div class="list-note">Available 24/7</div></div><strong>(262) 214-9290</strong>';
       }
       
       // Coverage detail rows on home (6 rows)
@@ -3128,385 +2874,6 @@
       }, 1800);
     }
 
-    // ─── Webex Connect SDK Chat Integration ─────────────────────────
-    let sdkReady = false;
-    let sdkMessaging = null;
-    let sdkThread = null;
-    let sdkConnected = false;
-    let formResponseCount = 0;        // Atomic guard: only respond to form ONCE
-    const sdkUserId = () => (localStorage.getItem('farmers_demo_phone') || '').replace(/\D/g, '');
-
-    function initWebexSDK(callback) {
-      if (sdkReady) { callback(true); return; }
-      // Dynamically load jQuery + SDK + environments if not already loaded
-      loadScriptsSequential([
-        'https://code.jquery.com/jquery-1.12.4.min.js',
-        'assets/js/imi-environments.js',
-        'assets/js/webex-connect-sdk.min.js'
-      ], function() {
-        // Unregister any stale service workers, then start SDK and wait for SW ready
-        var doStartup = function() {
-          try {
-            IMI.IMIconnect.startup(imiEnvironments);
-            console.log('[SDK] Startup called, waiting for service worker...');
-            // Wait for the SDK's service worker to be ready before proceeding
-            if ('serviceWorker' in navigator) {
-              navigator.serviceWorker.ready.then(function(reg) {
-                console.log('[SDK] Service worker ready:', reg.scope);
-                sdkReady = true;
-                console.log('[SDK] Startup complete');
-                callback(true);
-              }).catch(function(e) {
-                console.warn('[SDK] SW ready failed, proceeding anyway:', e);
-                sdkReady = true;
-                callback(true);
-              });
-            } else {
-              sdkReady = true;
-              console.log('[SDK] Startup complete (no SW support)');
-              callback(true);
-            }
-          } catch(e) {
-            console.error('[SDK] Startup failed:', e);
-            callback(false);
-          }
-        };
-        if ('serviceWorker' in navigator) {
-          navigator.serviceWorker.getRegistrations().then(function(regs) {
-            var tasks = regs.map(function(r) { console.log('[SDK] Unregistering stale SW:', r.scope); return r.unregister(); });
-            Promise.all(tasks).then(function() {
-              console.log('[SDK] Stale SWs cleared, starting SDK');
-              doStartup();
-            });
-          }).catch(function() { doStartup(); });
-        } else {
-          doStartup();
-        }
-      });
-    }
-
-    function loadScriptsSequential(urls, done) {
-      if (!urls.length) { done(); return; }
-      var url = urls[0];
-      // Skip if already loaded
-      var existing = document.querySelector('script[src="' + url + '"], script[src*="' + url.split('/').pop() + '"]');
-      if (existing) { loadScriptsSequential(urls.slice(1), done); return; }
-      var s = document.createElement('script');
-      s.src = url;
-      s.onload = function() { loadScriptsSequential(urls.slice(1), done); };
-      s.onerror = function() { console.error('[SDK] Failed to load:', url); done(); };
-      document.body.appendChild(s);
-    }
-
-    function registerSDKUser(callback) {
-      var userId = sdkUserId();
-      if (!userId) { callback(false); return; }
-
-      if (IMI.IMIconnect.isRegistered()) {
-        console.log('[SDK] Already registered');
-        callback(true);
-        return;
-      }
-
-      var deviceProfile = new IMI.ICDeviceProfile(userId);
-      IMI.IMIconnect.register(deviceProfile, {
-        onSuccess: function() {
-          console.log('[SDK] Registered userId:', userId);
-          callback(true);
-        },
-        onFailure: function(errCode, errMsg) {
-          console.error('[SDK] Registration failed:', errCode, errMsg);
-          callback(false);
-        }
-      });
-    }
-
-    function connectSDKMessaging(callback) {
-      sdkMessaging = IMI.ICMessaging.getInstance();
-
-      // Set up message receiver
-      var receiver = new IMI.ICMessagingReceiver();
-      var connectCallback = callback;
-      receiver.onConnectionStatusChanged = function(status) {
-        console.log('[SDK] Connection status:', status, '(None=0, Connecting=1, Connected=2, Refused=3, Closed=4, Error=6)');
-        if (status === IMI.ICConnectionStatus.Connected || status === 2) {
-          sdkConnected = true;
-          updateChatStatus('connected');
-          if (connectCallback) { connectCallback(true); connectCallback = null; }
-        } else if (status === IMI.ICConnectionStatus.Refused || status === 3 ||
-                   status === IMI.ICConnectionStatus.Error || status === 6) {
-          sdkConnected = false;
-          updateChatStatus('error');
-          if (connectCallback) { connectCallback(false); connectCallback = null; }
-        }
-      };
-      receiver.onMessageReceived = function(message) {
-        console.log('[SDK] Message received:', message);
-        // Debug: dump full message details
-        try {
-          var dbg = {
-            text: message.getMessage ? message.getMessage() : null,
-            thread: message.getThread ? (function(t){ return t ? (t.getId ? t.getId() : t) : null; })(message.getThread()) : null,
-            tid: message.getTransactionId ? message.getTransactionId() : null,
-            attachments: message.getAttachments ? message.getAttachments() : [],
-            interactiveData: message.getInteractiveData ? message.getInteractiveData() : null
-          };
-          console.log('[SDK] Message details:', JSON.stringify(dbg, null, 2));
-        } catch(e) { console.log('[SDK] Debug dump error:', e); }
-
-        // Detect form template messages (have attachments with templateType "form")
-        var isFormTemplate = false;
-        var formAtt = null;
-        try {
-          var attachments = message.getAttachments ? message.getAttachments() : [];
-          for (var i = 0; i < (attachments || []).length; i++) {
-            var a = attachments[i];
-            console.log('[SDK] Attachment ' + i + ':', JSON.stringify(a));
-            if ((a.templateType && a.templateType === 'form') ||
-                (a.getTemplateType && a.getTemplateType() === 'form') ||
-                (a.contentType && a.contentType === 'template')) {
-              isFormTemplate = true;
-              formAtt = a;
-              break;
-            }
-          }
-        } catch(e) { console.log('[SDK] Attachment parse error:', e); }
-
-        if (isFormTemplate) {
-          // Already responded — ignore ALL subsequent form templates
-          if (formResponseCount > 0) {
-            console.log('[SDK] Ignoring form template (already responded, count=' + formResponseCount + ')');
-            return;
-          }
-
-          // CRITICAL: Get the thread from the incoming message — this is the flow's thread
-          var msgThread = null;
-          try { msgThread = message.getThread ? message.getThread() : null; } catch(e) {}
-
-          if (msgThread) {
-            sdkThread = msgThread;
-            console.log('[SDK] Using flow thread:', sdkThread.getId ? sdkThread.getId() : sdkThread);
-          } else {
-            console.warn('[SDK] Form message has no thread — cannot respond');
-            return;
-          }
-
-          autoRespondToForm(message, formAtt);
-          return;
-        }
-
-        // Normal text message from agent
-        var text = '';
-        try { text = message.getMessage ? message.getMessage() : ''; } catch(e) {}
-        if (text) renderMessage(text, 'agent');
-      };
-      sdkMessaging.setICMessagingReceiver(receiver);
-
-      sdkMessaging.connect();
-      // Fallback timeout in case status callback never fires
-      setTimeout(function() { if (connectCallback) { connectCallback(sdkConnected); connectCallback = null; } }, 5000);
-    }
-
-    function autoRespondToForm(originalMessage, formAttachment) {
-      // ATOMIC GUARD — only ever respond once, no matter how many code paths call this
-      if (formResponseCount > 0) {
-        console.log('[SDK] autoRespondToForm blocked (count=' + formResponseCount + ')');
-        return;
-      }
-      formResponseCount++;
-      console.log('[SDK] Submitting form response (attempt #' + formResponseCount + ')');
-      renderSystemMessage('Submitting your information...');
-
-      var nameVal = (document.getElementById('prechatName').value || '').trim();
-      var emailVal = (document.getElementById('prechatEmail').value || '').trim();
-
-      // Get the transaction ID to link response to the form
-      var tid = '';
-      try { tid = originalMessage.getTransactionId ? originalMessage.getTransactionId() : (originalMessage.tid || ''); } catch(e) {}
-
-      // Get the templateId from the form attachment
-      var templateId = '';
-      try { templateId = formAttachment.getTemplateId ? formAttachment.getTemplateId() : (formAttachment.templateId || ''); } catch(e) {}
-
-      // Build form response using ICInteractiveData
-      var interactiveData = new IMI.ICInteractiveData();
-      interactiveData.setType(IMI.ICInteractiveDataType.FormResponse);
-      if (tid) interactiveData.setRelatedTransactionId(tid);
-      interactiveData.setSubmittedAt(new Date().toISOString());
-
-      // Payload: match original form template structure with values filled in
-      interactiveData.setPayload({
-        fields: [
-          { name: 'Name', type: 'name', label: 'Name', value: nameVal, description: '', mandatory: true },
-          { name: 'email', type: 'email', label: 'Email', value: emailVal, description: '', mandatory: true }
-        ],
-        title: 'Live Chat',
-        templateId: templateId || '49TMSMNT0W'
-      });
-
-      var response = new IMI.ICMessage();
-      response.setMessage(nameVal);
-      response.setThread(sdkThread);
-      response.setInteractiveData(interactiveData);
-
-      console.log('[SDK] Form response payload:', JSON.stringify(interactiveData.toJSON()));
-
-      sdkMessaging.publishMessage(response, {
-        onSuccess: function() {
-          console.log('[SDK] Form response accepted by SDK');
-          renderSystemMessage('Info submitted — connecting to agent...');
-
-          // Enable chat input now that we have the flow's thread and form is submitted
-          updateChatStatus('connected');
-          document.getElementById('chatSendBtn').disabled = false;
-          document.getElementById('chatInput').focus();
-        },
-        onFailure: function(errCode, errMsg) {
-          console.error('[SDK] Form response publish failed:', errCode, errMsg);
-          formResponseCount = 0; // Allow retry on failure
-          renderSystemMessage('Failed to submit info. Please try again.');
-        }
-      });
-    }
-
-    function launchWebexChat() {
-      var btn = document.getElementById('startChatBtn');
-      btn.disabled = true;
-      btn.textContent = 'Connecting...';
-      updateChatStatus('connecting');
-
-      // Fire JDS event
-      jdsPostEvent('action:start-chat', {uiData:{title:'Start Chat',iconType:'chat',subTitle:'Started live chat',filterTags:['chat','action']}});
-
-      initWebexSDK(function(ok) {
-        if (!ok) {
-          btn.disabled = false;
-          btn.textContent = 'Start Live Chat';
-          updateChatStatus('error');
-          renderSystemMessage('Failed to initialize chat SDK.');
-          return;
-        }
-        registerSDKUser(function(regOk) {
-          if (!regOk) {
-            btn.disabled = false;
-            btn.textContent = 'Start Live Chat';
-            updateChatStatus('error');
-            renderSystemMessage('Failed to register. Check your phone number.');
-            return;
-          }
-          // Switch to active chat UI
-          document.getElementById('chat-prechat').style.display = 'none';
-          document.getElementById('chat-active').style.display = 'flex';
-
-          connectSDKMessaging(function(connected) {
-            if (connected) {
-              renderSystemMessage('Connected — waiting for agent flow...');
-            } else {
-              renderSystemMessage('Connecting to messaging service...');
-            }
-          });
-        });
-      });
-    }
-
-    function sendChatMessage() {
-      var input = document.getElementById('chatInput');
-      var text = (input.value || '').trim();
-      if (!text || !sdkThread || !sdkMessaging) return;
-
-      input.value = '';
-      renderMessage(text, 'user');
-      sendSDKMessage(text, false);
-    }
-
-    function sendSDKMessage(text, silent) {
-      if (!sdkMessaging || !sdkThread) return;
-      try {
-        var message = new IMI.ICMessage();
-        message.setMessage(text);
-        message.setThread(sdkThread);
-
-        sdkMessaging.publishMessage(message, {
-          onSuccess: function() { console.log('[SDK] Message published'); },
-          onFailure: function(errCode, errMsg) {
-            console.error('[SDK] Publish failed:', errCode, errMsg);
-            if (!silent) renderSystemMessage('Failed to send message. Try again.');
-          }
-        });
-      } catch(e) {
-        console.error('[SDK] Send error:', e);
-        if (!silent) renderSystemMessage('Error sending message.');
-      }
-    }
-
-    function renderMessage(text, sender) {
-      var container = document.getElementById('chatMessages');
-      var wrapper = document.createElement('div');
-      wrapper.className = 'chat-msg chat-msg-' + sender;
-
-      var bubble = document.createElement('div');
-      bubble.className = 'chat-bubble chat-bubble-' + sender;
-      bubble.textContent = text;
-
-      var meta = document.createElement('div');
-      meta.className = 'chat-msg-meta';
-      meta.textContent = (sender === 'user' ? 'You' : 'Agent') + ' · ' + new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-
-      wrapper.appendChild(bubble);
-      wrapper.appendChild(meta);
-      container.appendChild(wrapper);
-      container.scrollTop = container.scrollHeight;
-    }
-
-    function renderSystemMessage(text) {
-      var container = document.getElementById('chatMessages');
-      var msg = document.createElement('div');
-      msg.className = 'chat-system-msg';
-      msg.textContent = text;
-      container.appendChild(msg);
-      container.scrollTop = container.scrollHeight;
-    }
-
-    function exitChat() {
-      // Disconnect SDK
-      if (sdkMessaging) {
-        try { sdkMessaging.disconnect(); } catch(e) {}
-      }
-      sdkThread = null;
-      sdkConnected = false;
-      formResponseCount = 0;
-
-      document.getElementById('chatSendBtn').disabled = true;
-      document.getElementById('chat-prechat').style.display = 'flex';
-      document.getElementById('chat-active').style.display = 'none';
-      document.getElementById('chatMessages').innerHTML = '';
-
-      updateChatStatus('idle');
-    }
-
-    function updateChatStatus(state) {
-      const dot = document.getElementById('chatStatusDot');
-      const text = document.getElementById('chatStatusText');
-
-      if (state === 'connecting') {
-        dot.style.background = '#ff9500';
-        dot.style.boxShadow = '0 0 0 4px rgba(255,149,0,.12)';
-        text.textContent = 'Connecting...';
-      } else if (state === 'connected') {
-        dot.style.background = '#47c970';
-        dot.style.boxShadow = '0 0 0 4px rgba(71,201,112,.12)';
-        text.textContent = 'Live · Cisco Webex Contact Center';
-      } else if (state === 'error') {
-        dot.style.background = '#ff4d4f';
-        dot.style.boxShadow = '0 0 0 4px rgba(255,77,79,.12)';
-        text.textContent = 'Connection error';
-      } else {
-        dot.style.background = '#47c970';
-        dot.style.boxShadow = '0 0 0 4px rgba(71,201,112,.12)';
-        text.textContent = 'Ready · Cisco Webex Contact Center';
-      }
-    }
-    
     // Restore cached phone number on page load
     (function() {
       const cached = localStorage.getItem('farmers_demo_phone');
@@ -3515,17 +2882,15 @@
         phoneEl.value = cached;
         formatPhoneInput(phoneEl);
       }
-      // Chat input Enter key handler
-      var chatInput = document.getElementById('chatInput');
-      if (chatInput) {
-        chatInput.addEventListener('keydown', function(e) {
-          if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            sendChatMessage();
-          }
-        });
-      }
     })();
   </script>
+  <!-- Native Webex Connect Chat Widget (appears on all pages) -->
+  <div id="divicw"
+       data-bind="1037DA7E-AED7-49C9-BF31-96C35755BA74"
+       data-org=""
+       data-guid="b4c93442-7827-4944-b60b-535e61409fae"
+       style="display:none;">
+  </div>
+  <script src="https://media.imi.chat/widget/js/imichatinit.js"></script>
 </body>
 </html>
