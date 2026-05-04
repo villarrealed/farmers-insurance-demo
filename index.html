@@ -464,18 +464,22 @@
     }
 
     .settings-gear {
-      position: fixed; bottom: 24px; right: 24px; z-index: 8000;
-      width: 48px; height: 48px; border-radius: 50%;
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 10px 18px; border-radius: 14px;
       border: 1px solid var(--line);
       background: var(--surface-strong);
-      box-shadow: 0 8px 24px rgba(31,34,48,.12);
-      font-size: 22px; cursor: pointer;
-      display: grid; place-items: center;
-      transition: transform .3s, box-shadow .3s;
+      box-shadow: 0 4px 16px rgba(31,34,48,.08);
+      font-size: .88rem; font-weight: 600; color: var(--ink);
+      cursor: pointer; transition: transform .25s, box-shadow .25s, border-color .25s;
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
     }
-    .settings-gear:hover { transform: rotate(30deg); box-shadow: 0 8px 32px rgba(204,34,40,.18); }
+    .settings-gear:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 24px rgba(204,34,40,.14);
+      border-color: rgba(204,34,40,.22);
+    }
+    .settings-gear svg { width: 18px; height: 18px; flex: 0 0 auto; }
 
     .settings-overlay {
       position: fixed; inset: 0; z-index: 9000;
@@ -697,11 +701,19 @@
 
       <footer class="footer">
         <div><strong>Farmers Insurance</strong> · Customer Experience Demo</div>
-        <div class="powered"><span class="powered-dot" aria-hidden="true"></span>Powered by Cisco Webex Connect</div>
+        <div style="display:flex; align-items:center; gap:16px;">
+          <button class="settings-gear" onclick="openSettings()" title="Demo Administrator">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" stroke="currentColor" stroke-width="1.6"/>
+              <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.6"/>
+            </svg>
+            Demo Administrator
+          </button>
+          <div class="powered"><span class="powered-dot" aria-hidden="true"></span>Powered by Cisco Webex Connect</div>
+        </div>
       </footer>
     </section>
 
-    <button class="settings-gear" onclick="openSettings()" title="WxCC Settings">⚙️</button>
 
     <div class="settings-overlay" id="settingsOverlay" onclick="if(event.target===this)closeSettings()">
       <div class="settings-panel">
