@@ -3226,13 +3226,18 @@
 
       // Set up message receiver
       var receiver = new IMI.ICMessagingReceiver();
+      var connectCallback = callback;
       receiver.onConnectionStatusChanged = function(status) {
-        console.log('[SDK] Connection status:', status);
-        if (status === IMI.ICConnectionStatus.Connected || status === 'CONNECTED' || status === 1) {
+        console.log('[SDK] Connection status:', status, '(None=0, Connecting=1, Connected=2, Refused=3, Closed=4, Error=6)');
+        if (status === IMI.ICConnectionStatus.Connected || status === 2) {
           sdkConnected = true;
           updateChatStatus('connected');
-        } else {
+          if (connectCallback) { connectCallback(true); connectCallback = null; }
+        } else if (status === IMI.ICConnectionStatus.Refused || status === 3 ||
+                   status === IMI.ICConnectionStatus.Error || status === 6) {
           sdkConnected = false;
+          updateChatStatus('error');
+          if (connectCallback) { connectCallback(false); connectCallback = null; }
         }
       };
       receiver.onMessageReceived = function(message) {
@@ -3298,8 +3303,8 @@
       sdkMessaging.setICMessagingReceiver(receiver);
 
       sdkMessaging.connect();
-      // Give it a moment to connect
-      setTimeout(function() { callback(sdkConnected); }, 1500);
+      // Fallback timeout in case status callback never fires
+      setTimeout(function() { if (connectCallback) { connectCallback(sdkConnected); connectCallback = null; } }, 5000);
     }
 
     function autoRespondToForm(originalMessage, formAttachment) {
