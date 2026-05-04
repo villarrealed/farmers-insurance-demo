@@ -3144,13 +3144,28 @@
         'assets/js/imi-environments.js',
         'assets/js/webex-connect-sdk.min.js'
       ], function() {
-        // Unregister any stale service workers before SDK startup
+        // Unregister any stale service workers, then start SDK and wait for SW ready
         var doStartup = function() {
           try {
             IMI.IMIconnect.startup(imiEnvironments);
-            sdkReady = true;
-            console.log('[SDK] Startup complete');
-            callback(true);
+            console.log('[SDK] Startup called, waiting for service worker...');
+            // Wait for the SDK's service worker to be ready before proceeding
+            if ('serviceWorker' in navigator) {
+              navigator.serviceWorker.ready.then(function(reg) {
+                console.log('[SDK] Service worker ready:', reg.scope);
+                sdkReady = true;
+                console.log('[SDK] Startup complete');
+                callback(true);
+              }).catch(function(e) {
+                console.warn('[SDK] SW ready failed, proceeding anyway:', e);
+                sdkReady = true;
+                callback(true);
+              });
+            } else {
+              sdkReady = true;
+              console.log('[SDK] Startup complete (no SW support)');
+              callback(true);
+            }
           } catch(e) {
             console.error('[SDK] Startup failed:', e);
             callback(false);
