@@ -534,94 +534,51 @@
     }
 
     // ── Submit form response back to the flow (triggers OnFormResponse) ─
+    // SDK source analysis: publishMessage with interactiveData does NOT trigger
+    // the OnFormResponse server event — it just sends a regular message with
+    // an interactiveData property attached, which the platform ignores.
+    // The actual mechanism is messaging.sendClickedEvent(tid, interactiveData, cb)
+    // which POSTs to /<appId>/deliveryupdate with status:4 — this is what the
+    // server recognizes as a form/postback response and emits OnFormResponse for.
     function submitFormResponse(values) {
       if (!pendingForm) {
         log('submitFormResponse: no pending form', 'warn');
         return;
       }
-      const { message: formMsg, transactionId } = pendingForm;
+      const { transactionId } = pendingForm;
       log('Submitting form response · txn=' + transactionId + ' · ' + JSON.stringify(values), 'info');
 
-      // Diagnostic: dump the SDK's interactive-data API surface so we can see
-      // the real method names in this minified v1.8 build
-      const apiProbe = {
-        ICInteractiveData: typeof IMI.ICInteractiveData,
-        ICInteractiveDataType: IMI.ICInteractiveDataType,
-        ICMessage_proto_methods: (() => {
-          try {
-            const m = new IMI.ICMessage();
-            return Object.getOwnPropertyNames(Object.getPrototypeOf(m)).filter(n => /interactive|payload|related|form|template/i.test(n));
-          } catch (_) { return 'probe-failed'; }
-        })(),
-        ICInteractiveData_proto_methods: (() => {
-          try {
-            if (typeof IMI.ICInteractiveData !== 'function') return 'not-a-constructor';
-            const d = new IMI.ICInteractiveData();
-            return Object.getOwnPropertyNames(Object.getPrototypeOf(d));
-          } catch (_) { return 'probe-failed'; }
-        })()
-      };
-      console.log('[diag] SDK interactive API surface:', apiProbe);
-      log('[diag] ICInteractiveData=' + apiProbe.ICInteractiveData
-          + ' · ICMessage methods: ' + JSON.stringify(apiProbe.ICMessage_proto_methods)
-          + ' · ICInteractiveData methods: ' + JSON.stringify(apiProbe.ICInteractiveData_proto_methods),
-          'info');
+      const messaging = IMI.ICMessaging.getInstance();
+
+      // Probe API surface once — confirm sendClickedEvent exists in this build
+      if (typeof messaging.sendClickedEvent !== 'function') {
+        log('[diag] messaging.sendClickedEvent NOT FOUND on ICMessaging instance', 'err');
+        // Dump available methods for debugging
+        try {
+          const proto = Object.getPrototypeOf(messaging);
+          const names = Object.getOwnPropertyNames(proto)
+            .filter(n => /click|send|publish|form|interactive|postback/i.test(n));
+          log('[diag] candidate methods on messaging: ' + JSON.stringify(names), 'info');
+        } catch (_) {}
+        return;
+      }
 
       try {
-        const response = new IMI.ICMessage();
+        const interactive = new IMI.ICInteractiveData();
+        interactive.setType(IMI.ICInteractiveDataType.FormResponse);
+        interactive.setPayload(values);
+        // Per SDK source, sendClickedEvent reads getType/getIdentifier/getTitle/
+        // getActionURL/getPayload from the interactive data and rebuilds it server-side.
+        // setIdentifier with the form's templateId would be ideal but we don't have
+        // it on hand — sendClickedEvent works without it for FormResponse.
 
-        // Preserve thread from the incoming form message
-        let threadObj = null;
-        try {
-          if (typeof formMsg.getThread === 'function') threadObj = formMsg.getThread();
-        } catch (_) {}
-        if (threadObj) response.setThread(threadObj);
-        else if (activeThread) response.setThread(activeThread);
+        log('[diag] calling sendClickedEvent(tid=' + transactionId + ', interactive=' + JSON.stringify(interactive) + ')', 'info');
+        console.log('[diag] sendClickedEvent args:', { tid: transactionId, interactive });
 
-        // Link response to the originating form
-        if (transactionId && typeof response.setRelatedTransactionId === 'function') {
-          response.setRelatedTransactionId(transactionId);
-        } else {
-          log('[diag] setRelatedTransactionId NOT FOUND on ICMessage', 'warn');
-        }
-
-        // Build interactive data of type FormResponse
-        if (typeof IMI.ICInteractiveData === 'function') {
-          const interactive = new IMI.ICInteractiveData();
-          if (IMI.ICInteractiveDataType && IMI.ICInteractiveDataType.FormResponse != null) {
-            interactive.setType(IMI.ICInteractiveDataType.FormResponse);
-          } else {
-            log('[diag] IMI.ICInteractiveDataType.FormResponse NOT FOUND', 'warn');
-          }
-          if (typeof interactive.setPayload === 'function') {
-            interactive.setPayload(values);
-          } else {
-            log('[diag] ICInteractiveData.setPayload NOT FOUND', 'err');
-          }
-          if (typeof response.setInteractiveData === 'function') {
-            response.setInteractiveData(interactive);
-            log('[diag] setInteractiveData attached OK', 'ok');
-          } else {
-            log('[diag] ICMessage.setInteractiveData NOT FOUND — wrong method name in v1.8', 'err');
-          }
-        } else {
-          log('[diag] IMI.ICInteractiveData NOT a constructor', 'err');
-        }
-
-        // Diagnostic: show what we're about to send
-        try {
-          const wirePreview = JSON.stringify(response, null, 2);
-          console.log('[diag] outbound ICMessage:', response, '\nserialized:', wirePreview);
-          log('[diag] outbound serialized: ' + wirePreview.slice(0, 400), 'info');
-        } catch (_) {
-          console.log('[diag] outbound ICMessage (unserializable):', response);
-        }
-
-        const messaging = IMI.ICMessaging.getInstance();
-        messaging.publishMessage(response, {
+        messaging.sendClickedEvent(transactionId, interactive, {
           onSuccess: (resp) => {
-            log('Form response sent · OnFormResponse should fire in flow', 'ok');
-            console.log('form response onSuccess:', resp);
+            log('sendClickedEvent onSuccess · OnFormResponse should fire in flow', 'ok');
+            console.log('sendClickedEvent onSuccess:', resp);
             addMsg('Form submitted · ' + JSON.stringify(values), 'out', 'you');
             pendingForm = null;
           },
@@ -629,8 +586,8 @@
             const detail = (err && typeof err === 'object')
               ? JSON.stringify(err, Object.getOwnPropertyNames(err))
               : String(err);
-            log('Form response onFailure: ' + detail, 'err');
-            console.error('form response onFailure object:', err);
+            log('sendClickedEvent onFailure: ' + detail, 'err');
+            console.error('sendClickedEvent onFailure object:', err);
           }
         });
       } catch (e) {
