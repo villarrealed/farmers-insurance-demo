@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Webex Connect SDK — Test Harness</title>
+  <style>
+    :root {
+      --farmers-red: #cc2228;
+      --farmers-red-dark: #a31b20;
+      --bg: #f5f5f7;
+      --panel: #ffffff;
+      --border: #e5e5ea;
+      --text: #1d1d1f;
+      --muted: #6e6e73;
+      --ok: #34c759;
+      --warn: #ff9500;
+      --err: #ff3b30;
+      --info: #007aff;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 14px;
+    }
+    header {
+      background: var(--farmers-red);
+      color: #fff;
+      padding: 14px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    header h1 { font-size: 16px; margin: 0; font-weight: 600; }
+    header .env { font-size: 12px; opacity: .85; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      gap: 16px;
+      padding: 16px;
+      height: calc(100vh - 50px);
+    }
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+      overflow: auto;
+    }
+    .panel h2 {
+      margin: 0 0 12px 0;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      color: var(--muted);
+    }
+    .row { margin-bottom: 10px; }
+    label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+    input, button, select {
+      font: inherit;
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: #fff;
+      width: 100%;
+    }
+    button {
+      background: var(--farmers-red);
+      color: #fff;
+      border: none;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    button:hover:not(:disabled) { background: var(--farmers-red-dark); }
+    button:disabled { background: #c7c7cc; cursor: not-allowed; }
+    button.secondary { background: #fff; color: var(--text); border: 1px solid var(--border); }
+    button.secondary:hover:not(:disabled) { background: #f2f2f7; }
+
+    .status-grid { display: grid; grid-template-columns: 1fr auto; gap: 6px 10px; font-size: 13px; align-items: center; }
+    .status-grid .label { color: var(--muted); }
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 11px;
+      font-weight: 600;
+      background: #e5e5ea;
+      color: var(--muted);
+    }
+    .badge.ok { background: #d4f4dc; color: #1a7430; }
+    .badge.warn { background: #fff1d6; color: #8a5a00; }
+    .badge.err { background: #ffd6d6; color: #8a1a1a; }
+    .badge.info { background: #d6e8ff; color: #003a8c; }
+
+    #log {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 11.5px;
+      line-height: 1.5;
+      background: #1d1d1f;
+      color: #f5f5f7;
+      padding: 12px;
+      border-radius: 8px;
+      height: 320px;
+      overflow: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .log-line { margin-bottom: 2px; }
+    .log-time { color: #8e8e93; margin-right: 8px; }
+    .log-level-info  { color: #6ab7ff; }
+    .log-level-ok    { color: #5fd97c; }
+    .log-level-warn  { color: #ffb84d; }
+    .log-level-err   { color: #ff7a7a; }
+    .log-level-event { color: #d97cff; }
+
+    .chat {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+    .messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px;
+      background: #fafafa;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin-bottom: 12px;
+      min-height: 200px;
+    }
+    .msg {
+      max-width: 75%;
+      padding: 8px 12px;
+      border-radius: 14px;
+      margin-bottom: 8px;
+      font-size: 14px;
+      line-height: 1.4;
+      word-wrap: break-word;
+    }
+    .msg.out { background: var(--farmers-red); color: #fff; margin-left: auto; border-bottom-right-radius: 4px; }
+    .msg.in  { background: #e5e5ea; color: #1d1d1f; margin-right: auto; border-bottom-left-radius: 4px; }
+    .msg.sys { background: transparent; color: var(--muted); font-style: italic; font-size: 12px; text-align: center; max-width: 100%; padding: 4px; }
+    .msg-meta { font-size: 10px; opacity: .7; margin-top: 2px; }
+
+    .composer { display: flex; gap: 8px; }
+    .composer input { flex: 1; }
+    .composer button { width: auto; padding: 8px 16px; }
+
+    .btn-row { display: flex; gap: 8px; margin-top: 8px; }
+    .btn-row button { flex: 1; }
+    code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; background: #f2f2f7; padding: 1px 5px; border-radius: 3px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🧪 Webex Connect SDK — Test Harness</h1>
+    <span class="env">App: <strong id="hAppId">—</strong> · Region: <strong id="hRegion">US</strong></span>
+  </header>
+
+  <div class="layout">
+    <!-- LEFT: Controls + status + log -->
+    <div class="panel">
+      <h2>1. Configuration</h2>
+      <div class="row">
+        <label>Guest userId (random by default)</label>
+        <input id="userId" type="text" />
+      </div>
+      <div class="row">
+        <label>Display name (optional, sent in pre-chat)</label>
+        <input id="displayName" type="text" placeholder="Ed Villarreal" />
+      </div>
+      <div class="row">
+        <label>Email (optional)</label>
+        <input id="email" type="email" placeholder="ed.villarreal@example.com" />
+      </div>
+
+      <h2 style="margin-top:18px;">2. Lifecycle</h2>
+      <div class="status-grid">
+        <span class="label">SDK loaded</span>             <span id="sStatus_sdk" class="badge">pending</span>
+        <span class="label">Startup</span>                <span id="sStatus_startup" class="badge">pending</span>
+        <span class="label">Registered</span>             <span id="sStatus_register" class="badge">pending</span>
+        <span class="label">Connection</span>             <span id="sStatus_conn" class="badge">pending</span>
+        <span class="label">Active thread</span>          <span id="sStatus_thread" class="badge">none</span>
+      </div>
+      <div class="btn-row">
+        <button id="btnRegister">Register guest</button>
+        <button id="btnUnregister" class="secondary" disabled>Unregister</button>
+      </div>
+      <div class="btn-row">
+        <button id="btnConnect" class="secondary" disabled>Connect</button>
+        <button id="btnDisconnect" class="secondary" disabled>Disconnect</button>
+      </div>
+      <div class="btn-row">
+        <button id="btnNewThread" class="secondary" disabled>Create thread</button>
+        <button id="btnFetchThreads" class="secondary" disabled>Fetch threads</button>
+      </div>
+
+      <h2 style="margin-top:18px;">3. Event log</h2>
+      <div id="log"></div>
+      <div class="btn-row">
+        <button class="secondary" onclick="document.getElementById('log').innerHTML=''">Clear log</button>
+      </div>
+    </div>
+
+    <!-- RIGHT: Chat preview -->
+    <div class="panel chat">
+      <h2>Chat preview</h2>
+      <div id="messages" class="messages">
+        <div class="msg sys">Register a guest user, connect, then create a thread to start chatting.</div>
+      </div>
+      <div class="composer">
+        <input id="composer" type="text" placeholder="Type a message…" disabled />
+        <button id="btnSend" disabled>Send</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Webex Connect SDK + tenant config -->
+  <script src="sdk-vendor/imi-environments.js"></script>
+  <script src="sdk-vendor/webex-connect-sdk.min.js"></script>
+
+  <script>
+    /* ─────────────────────────────────────────────────────────────
+       Webex Connect SDK test harness
+       Goal: verify startup → register → connect → publish round-trip
+       Uses the IMI.* namespace (preserved in v1.8 minified SDK).
+       ───────────────────────────────────────────────────────────── */
+
+    const $  = (id) => document.getElementById(id);
+    const log = (msg, level = 'info') => {
+      const line = document.createElement('div');
+      line.className = 'log-line';
+      const t = new Date().toTimeString().slice(0, 8);
+      line.innerHTML = `<span class="log-time">${t}</span><span class="log-level-${level}">${msg}</span>`;
+      const box = $('log');
+      box.appendChild(line);
+      box.scrollTop = box.scrollHeight;
+    };
+    const setBadge = (id, text, kind = '') => {
+      const el = $(id);
+      el.textContent = text;
+      el.className = 'badge' + (kind ? ' ' + kind : '');
+    };
+    const addMsg = (text, dir = 'in', meta = '') => {
+      const m = document.createElement('div');
+      m.className = 'msg ' + dir;
+      m.textContent = text;
+      if (meta) {
+        const x = document.createElement('div');
+        x.className = 'msg-meta';
+        x.textContent = meta;
+        m.appendChild(x);
+      }
+      $('messages').appendChild(m);
+      $('messages').scrollTop = $('messages').scrollHeight;
+    };
+
+    let activeThreadId = null;
+    let currentUserId  = null;
+
+    // ── 0. Confirm SDK + env loaded ──────────────────────────────
+    function preflight() {
+      // imi-environments.js exposes window.imiEnvironments
+      const envOk = typeof imiEnvironments === 'object' && imiEnvironments?.default?.asset?.appId;
+      const sdkOk = typeof IMI === 'object' && typeof IMI.IMIconnect === 'object';
+
+      if (!envOk) {
+        setBadge('sStatus_sdk', 'env missing', 'err');
+        log('imi-environments.js not loaded or malformed', 'err');
+        return false;
+      }
+      if (!sdkOk) {
+        setBadge('sStatus_sdk', 'sdk missing', 'err');
+        log('webex-connect-sdk.min.js did not expose IMI namespace', 'err');
+        return false;
+      }
+      setBadge('sStatus_sdk', 'loaded', 'ok');
+      $('hAppId').textContent = imiEnvironments.default.asset.appId;
+      log(`SDK loaded · appId=${imiEnvironments.default.asset.appId}`, 'ok');
+
+      // Pre-fill a guest userId
+      $('userId').value = 'guest-' + Math.random().toString(36).slice(2, 10) + '-' + Date.now().toString(36);
+      return true;
+    }
+
+    // ── 1. Startup ───────────────────────────────────────────────
+    function startup() {
+      try {
+        IMI.IMIconnect.startup();
+        setBadge('sStatus_startup', 'ok', 'ok');
+        log('IMIconnect.startup() called', 'ok');
+        return true;
+      } catch (e) {
+        setBadge('sStatus_startup', 'failed', 'err');
+        log('startup() threw: ' + (e?.message || e), 'err');
+        return false;
+      }
+    }
+
+    // ── 2. Register a guest device ───────────────────────────────
+    function registerGuest() {
+      const userId = $('userId').value.trim() || ('guest-' + Date.now());
+      currentUserId = userId;
+      const deviceId = userId + '-' + Date.now();
+      log(`Registering · userId=${userId} · deviceId=${deviceId}`, 'info');
+
+      // ICDeviceProfile signature in 2022 sample: new ICDeviceProfile(deviceID, userID)
+      const deviceProfile = new IMI.ICDeviceProfile(deviceId, userId);
+
+      IMI.IMIconnect.register(deviceProfile, {
+        onSuccess: (msg) => {
+          setBadge('sStatus_register', 'registered', 'ok');
+          log('register onSuccess: ' + JSON.stringify(msg), 'ok');
+          $('btnUnregister').disabled = false;
+          $('btnConnect').disabled = false;
+          $('btnNewThread').disabled = false;
+          $('btnFetchThreads').disabled = false;
+          $('btnRegister').disabled = true;
+          // Auto-connect after register (matches sample app pattern)
+          attachMessageListener();
+          connect();
+        },
+        onFailure: (err) => {
+          setBadge('sStatus_register', 'failed', 'err');
+          log('register onFailure: ' + JSON.stringify(err), 'err');
+        }
+      });
+    }
+
+    function unregister() {
+      IMI.IMIconnect.unregister({
+        onSuccess: () => {
+          setBadge('sStatus_register', 'unregistered', '');
+          setBadge('sStatus_conn', 'disconnected', '');
+          setBadge('sStatus_thread', 'none', '');
+          log('Unregistered', 'ok');
+          $('btnRegister').disabled = false;
+          $('btnUnregister').disabled = true;
+          $('btnConnect').disabled = true;
+          $('btnDisconnect').disabled = true;
+          $('btnNewThread').disabled = true;
+          $('btnFetchThreads').disabled = true;
+          $('composer').disabled = true;
+          $('btnSend').disabled = true;
+          activeThreadId = null;
+        },
+        onFailure: (err) => log('unregister onFailure: ' + JSON.stringify(err), 'err')
+      });
+    }
+
+    // ── 3. Connect MQTT/WebSocket and listen ─────────────────────
+    function attachMessageListener() {
+      const messaging = IMI.ICMessaging.getInstance();
+      messaging.setICMessagingReceiver({
+        onConnectionStatusChanged: (statusCode) => {
+          log('▷ onConnectionStatusChanged: ' + JSON.stringify(statusCode), 'event');
+          // statusCode varies — usually a number or { code, status } object
+          const code = (statusCode && typeof statusCode === 'object') ? (statusCode.code ?? statusCode.status) : statusCode;
+          if (code === 1 || code === 'CONNECTED' || code === 'connected') {
+            setBadge('sStatus_conn', 'connected', 'ok');
+            $('btnConnect').disabled = true;
+            $('btnDisconnect').disabled = false;
+          } else if (code === 0 || code === 'DISCONNECTED' || code === 'disconnected') {
+            setBadge('sStatus_conn', 'disconnected', 'warn');
+            $('btnConnect').disabled = false;
+            $('btnDisconnect').disabled = true;
+          } else {
+            setBadge('sStatus_conn', String(code), 'info');
+          }
+        },
+        onMessageReceived: (message) => {
+          log('▷ onMessageReceived: ' + JSON.stringify(message).slice(0, 200), 'event');
+          // Try common payload shapes
+          const text = message?.message?.text
+                    ?? message?.text
+                    ?? message?.payload?.text
+                    ?? message?.body
+                    ?? JSON.stringify(message);
+          const from = message?.from || message?.sender || 'agent';
+          addMsg(text, 'in', from);
+        }
+      });
+      log('Message listener attached', 'ok');
+    }
+
+    function connect() {
+      const messaging = IMI.ICMessaging.getInstance();
+      if (messaging.isConnected && messaging.isConnected()) {
+        log('already connected', 'info');
+        setBadge('sStatus_conn', 'connected', 'ok');
+        return;
+      }
+      try {
+        messaging.connect();
+        log('messaging.connect() called', 'ok');
+      } catch (e) {
+        log('connect() threw: ' + (e?.message || e), 'err');
+      }
+    }
+
+    function disconnect() {
+      const messaging = IMI.ICMessaging.getInstance();
+      try {
+        messaging.disconnect();
+        log('messaging.disconnect() called', 'ok');
+      } catch (e) {
+        log('disconnect() threw: ' + (e?.message || e), 'err');
+      }
+    }
+
+    // ── 4. Threads ───────────────────────────────────────────────
+    function createThread() {
+      const messaging = IMI.ICMessaging.getInstance();
+      if (typeof messaging.createThread !== 'function') {
+        log('createThread() not available on this SDK build', 'err');
+        return;
+      }
+      const title = 'Farmers support · ' + new Date().toLocaleTimeString();
+      log('Creating thread: ' + title, 'info');
+
+      // Many builds accept ({ title, ...meta }, callback). Try the simplest shape first.
+      try {
+        messaging.createThread({ title }, {
+          onSuccess: (thread) => {
+            log('createThread onSuccess: ' + JSON.stringify(thread).slice(0, 200), 'ok');
+            activeThreadId = thread?.threadId || thread?.id || thread;
+            setBadge('sStatus_thread', String(activeThreadId).slice(0, 12) + '…', 'ok');
+            $('composer').disabled = false;
+            $('btnSend').disabled = false;
+            addMsg('Thread created · ' + activeThreadId, 'sys');
+          },
+          onFailure: (err) => log('createThread onFailure: ' + JSON.stringify(err), 'err')
+        });
+      } catch (e) {
+        log('createThread() threw: ' + (e?.message || e) + ' — try alternate signature', 'err');
+      }
+    }
+
+    function fetchThreads() {
+      const messaging = IMI.ICMessaging.getInstance();
+      if (typeof messaging.fetchThreads !== 'function') {
+        log('fetchThreads() not available', 'err');
+        return;
+      }
+      messaging.fetchThreads({}, {
+        onSuccess: (threads) => log('fetchThreads onSuccess: ' + JSON.stringify(threads).slice(0, 300), 'ok'),
+        onFailure: (err) => log('fetchThreads onFailure: ' + JSON.stringify(err), 'err')
+      });
+    }
+
+    // ── 5. Send a message ────────────────────────────────────────
+    function sendMessage() {
+      const text = $('composer').value.trim();
+      if (!text) return;
+      if (!activeThreadId) {
+        log('No active thread — click "Create thread" first', 'warn');
+        return;
+      }
+      const messaging = IMI.ICMessaging.getInstance();
+      if (typeof messaging.publishMessage !== 'function') {
+        log('publishMessage() not available', 'err');
+        return;
+      }
+      log(`Publishing: "${text}" to thread ${activeThreadId}`, 'info');
+      // Common signature: publishMessage(threadId, messageObj, callback)
+      try {
+        messaging.publishMessage(activeThreadId, { text }, {
+          onSuccess: (resp) => {
+            log('publishMessage onSuccess: ' + JSON.stringify(resp).slice(0, 200), 'ok');
+            addMsg(text, 'out', 'you');
+            $('composer').value = '';
+          },
+          onFailure: (err) => log('publishMessage onFailure: ' + JSON.stringify(err), 'err')
+        });
+      } catch (e) {
+        log('publishMessage() threw: ' + (e?.message || e), 'err');
+      }
+    }
+
+    // ── Wire up UI ───────────────────────────────────────────────
+    window.addEventListener('DOMContentLoaded', () => {
+      if (!preflight()) return;
+      if (!startup()) return;
+
+      $('btnRegister').addEventListener('click', registerGuest);
+      $('btnUnregister').addEventListener('click', unregister);
+      $('btnConnect').addEventListener('click', connect);
+      $('btnDisconnect').addEventListener('click', disconnect);
+      $('btnNewThread').addEventListener('click', createThread);
+      $('btnFetchThreads').addEventListener('click', fetchThreads);
+      $('btnSend').addEventListener('click', sendMessage);
+      $('composer').addEventListener('keydown', (e) => { if (e.key === 'Enter') sendMessage(); });
+
+      log('Ready — click "Register guest" to begin', 'info');
+    });
+  </script>
+</body>
+</html>
