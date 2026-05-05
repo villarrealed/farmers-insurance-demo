@@ -274,7 +274,8 @@
       el('messages').scrollTop = el('messages').scrollHeight;
     };
 
-    let activeThreadId = null;
+    let activeThread   = null;   // typed IMI.ICThread instance (needed by publishMessage)
+    let activeThreadId = null;   // server-assigned id (string), for display
     let currentUserId  = null;
 
     // ── 0. Confirm SDK + env loaded ──────────────────────────────
@@ -427,7 +428,7 @@
       }
     }
 
-    // ── 4. Threads ───────────────────────────────────────────────
+    // ── 4. Threads (use typed IMI.ICThread per official SDK API) ─
     function createThread() {
       const messaging = IMI.ICMessaging.getInstance();
       if (typeof messaging.createThread !== 'function') {
@@ -437,18 +438,38 @@
       const title = 'Farmers support · ' + new Date().toLocaleTimeString();
       log('Creating thread: ' + title, 'info');
 
-      // Many builds accept ({ title, ...meta }, callback). Try the simplest shape first.
       try {
-        messaging.createThread({ title }, {
-          onSuccess: (thread) => {
-            log('createThread onSuccess: ' + JSON.stringify(thread).slice(0, 200), 'ok');
-            activeThreadId = thread?.threadId || thread?.id || thread;
-            setBadge('sStatus_thread', String(activeThreadId).slice(0, 12) + '…', 'ok');
+        // Per Webex Connect SDK quickstart: must use new IMI.ICThread() with setters,
+        // NOT a plain object literal — the SDK validates parameter type synchronously.
+        const thread = new IMI.ICThread();
+        thread.setTitle(title);
+        if (IMI.ICThreadStatus && IMI.ICThreadStatus.Active != null) {
+          thread.setStatus(IMI.ICThreadStatus.Active);
+        }
+        if (IMI.ICThreadType && IMI.ICThreadType.Conversation != null) {
+          thread.setType(IMI.ICThreadType.Conversation);
+        }
+
+        messaging.createThread(thread, {
+          onSuccess: (threadObj) => {
+            // threadObj is the populated ICThread; getId() returns the server-assigned ID
+            const tid = (typeof threadObj?.getId === 'function') ? threadObj.getId() : (threadObj?.id || threadObj);
+            log('createThread onSuccess · id=' + tid, 'ok');
+            console.log('createThread onSuccess full object:', threadObj);
+            activeThread = threadObj;     // store the typed object for publishMessage
+            activeThreadId = tid;
+            setBadge('sStatus_thread', String(tid).slice(0, 12) + '…', 'ok');
             el('composer').disabled = false;
             el('btnSend').disabled = false;
-            addMsg('Thread created · ' + activeThreadId, 'sys');
+            addMsg('Thread created · ' + tid, 'sys');
           },
-          onFailure: (err) => log('createThread onFailure: ' + JSON.stringify(err), 'err')
+          onFailure: (err) => {
+            const detail = (err && typeof err === 'object')
+              ? JSON.stringify(err, Object.getOwnPropertyNames(err))
+              : String(err);
+            log('createThread onFailure: ' + detail, 'err');
+            console.error('createThread onFailure object:', err);
+          }
         });
       } catch (e) {
         const detail = (e && typeof e === 'object')
@@ -465,17 +486,22 @@
         log('fetchThreads() not available', 'err');
         return;
       }
-      messaging.fetchThreads({}, {
-        onSuccess: (threads) => log('fetchThreads onSuccess: ' + JSON.stringify(threads).slice(0, 300), 'ok'),
+      // v1.8 signature: fetchThreads(beforeDate, limit, callback). null beforeDate = newest.
+      messaging.fetchThreads(null, 10, {
+        onSuccess: (threads, hasMore) => {
+          const count = Array.isArray(threads) ? threads.length : 'n/a';
+          log('fetchThreads onSuccess · count=' + count + ' · hasMore=' + hasMore, 'ok');
+          console.log('fetchThreads result:', threads);
+        },
         onFailure: (err) => log('fetchThreads onFailure: ' + JSON.stringify(err), 'err')
       });
     }
 
-    // ── 5. Send a message ────────────────────────────────────────
+    // ── 5. Send a message (use typed IMI.ICMessage per official SDK API) ─
     function sendMessage() {
       const text = el('composer').value.trim();
       if (!text) return;
-      if (!activeThreadId) {
+      if (!activeThread) {
         log('No active thread — click "Create thread" first', 'warn');
         return;
       }
@@ -485,18 +511,33 @@
         return;
       }
       log(`Publishing: "${text}" to thread ${activeThreadId}`, 'info');
-      // Common signature: publishMessage(threadId, messageObj, callback)
       try {
-        messaging.publishMessage(activeThreadId, { text }, {
+        // Per Webex Connect SDK quickstart: typed ICMessage with setMessage + setThread.
+        const message = new IMI.ICMessage();
+        message.setMessage(text);
+        message.setThread(activeThread);
+
+        messaging.publishMessage(message, {
           onSuccess: (resp) => {
-            log('publishMessage onSuccess: ' + JSON.stringify(resp).slice(0, 200), 'ok');
+            log('publishMessage onSuccess', 'ok');
+            console.log('publishMessage onSuccess full:', resp);
             addMsg(text, 'out', 'you');
             el('composer').value = '';
           },
-          onFailure: (err) => log('publishMessage onFailure: ' + JSON.stringify(err), 'err')
+          onFailure: (err) => {
+            const detail = (err && typeof err === 'object')
+              ? JSON.stringify(err, Object.getOwnPropertyNames(err))
+              : String(err);
+            log('publishMessage onFailure: ' + detail, 'err');
+            console.error('publishMessage onFailure object:', err);
+          }
         });
       } catch (e) {
-        log('publishMessage() threw: ' + (e?.message || e), 'err');
+        const detail = (e && typeof e === 'object')
+          ? (e.message || JSON.stringify(e, Object.getOwnPropertyNames(e)))
+          : String(e);
+        log('publishMessage() threw: ' + detail, 'err');
+        console.error('publishMessage() exception object:', e);
       }
     }
 
