@@ -277,6 +277,7 @@
     let activeThread   = null;   // typed IMI.ICThread instance (needed by publishMessage)
     let activeThreadId = null;   // server-assigned id (string), for display
     let currentUserId  = null;
+    let pendingForm    = null;   // { message, transactionId, fields[] } for current pre-chat form
 
     // ── 0. Confirm SDK + env loaded ──────────────────────────────
     function preflight() {
@@ -389,18 +390,215 @@
           }
         },
         onMessageReceived: (message) => {
-          log('▷ onMessageReceived: ' + JSON.stringify(message).slice(0, 200), 'event');
-          // Try common payload shapes
-          const text = message?.message?.text
-                    ?? message?.text
-                    ?? message?.payload?.text
-                    ?? message?.body
-                    ?? JSON.stringify(message);
-          const from = message?.from || message?.sender || 'agent';
-          addMsg(text, 'in', from);
+          handleIncomingMessage(message);
         }
       });
       log('Message listener attached', 'ok');
+    }
+
+    // ── Incoming message router: detects pre-chat form template vs plain text ─
+    function handleIncomingMessage(message) {
+      // Best-effort safe inspection — SDK objects may be class instances OR plain
+      let summary;
+      try { summary = JSON.stringify(message).slice(0, 300); }
+      catch (_) { summary = '[unserializable ICMessage]'; }
+      log('▷ onMessageReceived: ' + summary, 'event');
+      console.log('onMessageReceived full:', message);
+
+      // 1. Try to detect a form-template attachment (pre-chat form from flow)
+      let attachments = null;
+      try {
+        if (typeof message?.getAttachments === 'function') attachments = message.getAttachments();
+        else if (Array.isArray(message?.attachments))      attachments = message.attachments;
+      } catch (_) {}
+
+      if (attachments && attachments.length > 0) {
+        const att = attachments[0];
+        let contentType = null;
+        try {
+          if (typeof att?.getContentType === 'function') contentType = att.getContentType();
+          else contentType = att?.contentType ?? att?.type;
+        } catch (_) {}
+
+        const isTemplate = contentType === (IMI.ICContentType && IMI.ICContentType.Template)
+                        || String(contentType).toLowerCase().includes('template')
+                        || typeof att?.getFields === 'function';
+
+        if (isTemplate) {
+          let fields = [];
+          try {
+            if (typeof att.getFields === 'function') fields = att.getFields() || [];
+            else if (Array.isArray(att.fields))     fields = att.fields;
+          } catch (_) {}
+
+          let transactionId = null;
+          try {
+            if (typeof message.getTransactionId === 'function') transactionId = message.getTransactionId();
+            else transactionId = message.transactionId;
+          } catch (_) {}
+
+          pendingForm = { message, transactionId, fields };
+          log(`Pre-chat form received · ${fields.length} field(s) · txn=${transactionId}`, 'event');
+          renderForm(fields);
+          return;
+        }
+      }
+
+      // 2. Otherwise: treat as plain text agent message
+      const text = (typeof message?.getMessage === 'function' && message.getMessage())
+                || message?.message?.text
+                || message?.text
+                || message?.payload?.text
+                || message?.body
+                || summary;
+      const from = message?.from || message?.sender || 'agent';
+      addMsg(text, 'in', from);
+    }
+
+    // ── Render incoming form fields inside the chat preview ─────
+    function renderForm(fields) {
+      const container = document.createElement('div');
+      container.className = 'msg in';
+      container.style.maxWidth = '90%';
+
+      const title = document.createElement('div');
+      title.style.fontWeight = '600';
+      title.style.marginBottom = '6px';
+      title.textContent = 'Pre-chat form';
+      container.appendChild(title);
+
+      const form = document.createElement('form');
+      form.id = 'preChatForm';
+
+      fields.forEach((f) => {
+        let name, label, type, mandatory, options;
+        try { name      = (typeof f.getName      === 'function') ? f.getName()      : f.name; } catch (_) {}
+        try { label     = (typeof f.getLabel     === 'function') ? f.getLabel()     : f.label; } catch (_) {}
+        try { type      = (typeof f.getType      === 'function') ? f.getType()      : f.type; } catch (_) {}
+        try { mandatory = (typeof f.getMandatory === 'function') ? f.getMandatory() : f.mandatory; } catch (_) {}
+        try { options   = (typeof f.getOptions   === 'function') ? f.getOptions()   : f.options; } catch (_) {}
+
+        const row = document.createElement('div');
+        row.style.marginBottom = '8px';
+
+        const lab = document.createElement('label');
+        lab.textContent = (label || name) + (mandatory ? ' *' : '');
+        lab.style.color = '#1d1d1f';
+        lab.style.fontSize = '12px';
+        row.appendChild(lab);
+
+        let input;
+        const typeStr = String(type || '').toLowerCase();
+        if (typeStr.includes('dropdown') || (Array.isArray(options) && options.length)) {
+          input = document.createElement('select');
+          (options || []).forEach((opt) => {
+            const o = document.createElement('option');
+            o.value = opt; o.textContent = opt;
+            input.appendChild(o);
+          });
+        } else {
+          input = document.createElement('input');
+          input.type = typeStr.includes('email') ? 'email' : 'text';
+        }
+        input.name = name;
+        if (mandatory) input.required = true;
+        input.style.width = '100%';
+        input.style.padding = '6px 8px';
+        input.style.border = '1px solid #d2d2d7';
+        input.style.borderRadius = '4px';
+        input.style.marginTop = '2px';
+        row.appendChild(input);
+        form.appendChild(row);
+      });
+
+      const submit = document.createElement('button');
+      submit.type = 'submit';
+      submit.textContent = 'Submit';
+      submit.style.marginTop = '4px';
+      submit.style.padding = '6px 14px';
+      submit.style.width = 'auto';
+      form.appendChild(submit);
+
+      form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const values = {};
+        new FormData(form).forEach((v, k) => { values[k] = v; });
+        submitFormResponse(values);
+        // Disable the form once submitted
+        Array.from(form.elements).forEach((el) => { el.disabled = true; });
+      });
+
+      container.appendChild(form);
+      el('messages').appendChild(container);
+      el('messages').scrollTop = el('messages').scrollHeight;
+    }
+
+    // ── Submit form response back to the flow (triggers OnFormResponse) ─
+    function submitFormResponse(values) {
+      if (!pendingForm) {
+        log('submitFormResponse: no pending form', 'warn');
+        return;
+      }
+      const { message: formMsg, transactionId } = pendingForm;
+      log('Submitting form response · txn=' + transactionId + ' · ' + JSON.stringify(values), 'info');
+
+      try {
+        const response = new IMI.ICMessage();
+
+        // Preserve thread from the incoming form message
+        let threadObj = null;
+        try {
+          if (typeof formMsg.getThread === 'function') threadObj = formMsg.getThread();
+        } catch (_) {}
+        if (threadObj) response.setThread(threadObj);
+        else if (activeThread) response.setThread(activeThread);
+
+        // Link response to the originating form
+        if (transactionId && typeof response.setRelatedTransactionId === 'function') {
+          response.setRelatedTransactionId(transactionId);
+        }
+
+        // Build interactive data of type FormResponse
+        if (typeof IMI.ICInteractiveData === 'function') {
+          const interactive = new IMI.ICInteractiveData();
+          if (IMI.ICInteractiveDataType && IMI.ICInteractiveDataType.FormResponse != null) {
+            interactive.setType(IMI.ICInteractiveDataType.FormResponse);
+          }
+          if (typeof interactive.setPayload === 'function') {
+            interactive.setPayload(values);
+          }
+          if (typeof response.setInteractiveData === 'function') {
+            response.setInteractiveData(interactive);
+          } else {
+            log('ICMessage.setInteractiveData not available — SDK API mismatch', 'err');
+          }
+        } else {
+          log('IMI.ICInteractiveData not available — SDK API mismatch', 'err');
+        }
+
+        const messaging = IMI.ICMessaging.getInstance();
+        messaging.publishMessage(response, {
+          onSuccess: (resp) => {
+            log('Form response sent · OnFormResponse should fire in flow', 'ok');
+            console.log('form response onSuccess:', resp);
+            addMsg('Form submitted · ' + JSON.stringify(values), 'out', 'you');
+            pendingForm = null;
+          },
+          onFailure: (err) => {
+            const detail = (err && typeof err === 'object')
+              ? JSON.stringify(err, Object.getOwnPropertyNames(err))
+              : String(err);
+            log('Form response onFailure: ' + detail, 'err');
+            console.error('form response onFailure object:', err);
+          }
+        });
+      } catch (e) {
+        const detail = (e && typeof e === 'object')
+          ? (e.message || JSON.stringify(e, Object.getOwnPropertyNames(e)))
+          : String(e);
+        log('submitFormResponse threw: ' + detail, 'err');
+        console.error('submitFormResponse exception:', e);
+      }
     }
 
     function connect() {
