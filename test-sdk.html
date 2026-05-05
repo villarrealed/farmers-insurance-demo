@@ -220,12 +220,10 @@
   </div>
 
   <!-- Webex Connect SDK + tenant config
-       NOTE: SDK has a legacy jQuery dependency (uses bare $.ajax / $.each).
-       Load jQuery first and force-bind to window.$ before SDK evaluates. -->
-  <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+       NOTE: SDK v1.8.0 OFFICIALLY REQUIRES jQuery 1.12.4 (per Cisco quickstart).
+       jQuery 3.x is NOT supported and throws "$.ajax is not a function". -->
+  <script src="https://code.jquery.com/jquery-1.12.4.min.js" integrity="sha256-ZosEbRLbNQzLpnKIkEdrPv7lOy9C27hHQ+Xp8a4MxAQ=" crossorigin="anonymous"></script>
   <script>
-    // Belt-and-suspenders: ensure $ is globally bound to jQuery before SDK loads.
-    // Some minified SDKs read window.$ at evaluation time, not at call time.
     if (typeof window.jQuery === 'function') {
       window.$ = window.jQuery;
       console.log('[preflight] jQuery loaded:', window.jQuery.fn.jquery, '· $.ajax type:', typeof window.$.ajax);
@@ -236,7 +234,6 @@
   <script src="sdk-vendor/imi-environments.js"></script>
   <script src="sdk-vendor/webex-connect-sdk.min.js"></script>
   <script>
-    // After SDK loads, double-check $ is still jQuery (SDK should not shadow it).
     console.log('[post-sdk] window.$ === jQuery:', window.$ === window.jQuery,
                 '· $.ajax type:', typeof window.$ && typeof window.$.ajax);
   </script>
