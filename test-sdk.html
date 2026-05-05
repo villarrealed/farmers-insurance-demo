@@ -542,6 +542,31 @@
       const { message: formMsg, transactionId } = pendingForm;
       log('Submitting form response · txn=' + transactionId + ' · ' + JSON.stringify(values), 'info');
 
+      // Diagnostic: dump the SDK's interactive-data API surface so we can see
+      // the real method names in this minified v1.8 build
+      const apiProbe = {
+        ICInteractiveData: typeof IMI.ICInteractiveData,
+        ICInteractiveDataType: IMI.ICInteractiveDataType,
+        ICMessage_proto_methods: (() => {
+          try {
+            const m = new IMI.ICMessage();
+            return Object.getOwnPropertyNames(Object.getPrototypeOf(m)).filter(n => /interactive|payload|related|form|template/i.test(n));
+          } catch (_) { return 'probe-failed'; }
+        })(),
+        ICInteractiveData_proto_methods: (() => {
+          try {
+            if (typeof IMI.ICInteractiveData !== 'function') return 'not-a-constructor';
+            const d = new IMI.ICInteractiveData();
+            return Object.getOwnPropertyNames(Object.getPrototypeOf(d));
+          } catch (_) { return 'probe-failed'; }
+        })()
+      };
+      console.log('[diag] SDK interactive API surface:', apiProbe);
+      log('[diag] ICInteractiveData=' + apiProbe.ICInteractiveData
+          + ' · ICMessage methods: ' + JSON.stringify(apiProbe.ICMessage_proto_methods)
+          + ' · ICInteractiveData methods: ' + JSON.stringify(apiProbe.ICInteractiveData_proto_methods),
+          'info');
+
       try {
         const response = new IMI.ICMessage();
 
@@ -556,6 +581,8 @@
         // Link response to the originating form
         if (transactionId && typeof response.setRelatedTransactionId === 'function') {
           response.setRelatedTransactionId(transactionId);
+        } else {
+          log('[diag] setRelatedTransactionId NOT FOUND on ICMessage', 'warn');
         }
 
         // Build interactive data of type FormResponse
@@ -563,17 +590,31 @@
           const interactive = new IMI.ICInteractiveData();
           if (IMI.ICInteractiveDataType && IMI.ICInteractiveDataType.FormResponse != null) {
             interactive.setType(IMI.ICInteractiveDataType.FormResponse);
+          } else {
+            log('[diag] IMI.ICInteractiveDataType.FormResponse NOT FOUND', 'warn');
           }
           if (typeof interactive.setPayload === 'function') {
             interactive.setPayload(values);
+          } else {
+            log('[diag] ICInteractiveData.setPayload NOT FOUND', 'err');
           }
           if (typeof response.setInteractiveData === 'function') {
             response.setInteractiveData(interactive);
+            log('[diag] setInteractiveData attached OK', 'ok');
           } else {
-            log('ICMessage.setInteractiveData not available — SDK API mismatch', 'err');
+            log('[diag] ICMessage.setInteractiveData NOT FOUND — wrong method name in v1.8', 'err');
           }
         } else {
-          log('IMI.ICInteractiveData not available — SDK API mismatch', 'err');
+          log('[diag] IMI.ICInteractiveData NOT a constructor', 'err');
+        }
+
+        // Diagnostic: show what we're about to send
+        try {
+          const wirePreview = JSON.stringify(response, null, 2);
+          console.log('[diag] outbound ICMessage:', response, '\nserialized:', wirePreview);
+          log('[diag] outbound serialized: ' + wirePreview.slice(0, 400), 'info');
+        } catch (_) {
+          console.log('[diag] outbound ICMessage (unserializable):', response);
         }
 
         const messaging = IMI.ICMessaging.getInstance();
