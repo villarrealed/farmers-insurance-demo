@@ -245,20 +245,20 @@
        Uses the IMI.* namespace (preserved in v1.8 minified SDK).
        ───────────────────────────────────────────────────────────── */
 
-    const $  = (id) => document.getElementById(id);
+    const el = (id) => document.getElementById(id);
     const log = (msg, level = 'info') => {
       const line = document.createElement('div');
       line.className = 'log-line';
       const t = new Date().toTimeString().slice(0, 8);
       line.innerHTML = `<span class="log-time">${t}</span><span class="log-level-${level}">${msg}</span>`;
-      const box = $('log');
+      const box = el('log');
       box.appendChild(line);
       box.scrollTop = box.scrollHeight;
     };
     const setBadge = (id, text, kind = '') => {
-      const el = $(id);
-      el.textContent = text;
-      el.className = 'badge' + (kind ? ' ' + kind : '');
+      const node = el(id);
+      node.textContent = text;
+      node.className = 'badge' + (kind ? ' ' + kind : '');
     };
     const addMsg = (text, dir = 'in', meta = '') => {
       const m = document.createElement('div');
@@ -270,8 +270,8 @@
         x.textContent = meta;
         m.appendChild(x);
       }
-      $('messages').appendChild(m);
-      $('messages').scrollTop = $('messages').scrollHeight;
+      el('messages').appendChild(m);
+      el('messages').scrollTop = el('messages').scrollHeight;
     };
 
     let activeThreadId = null;
@@ -294,11 +294,11 @@
         return false;
       }
       setBadge('sStatus_sdk', 'loaded', 'ok');
-      $('hAppId').textContent = imiEnvironments.default.asset.appId;
+      el('hAppId').textContent = imiEnvironments.default.asset.appId;
       log(`SDK loaded · appId=${imiEnvironments.default.asset.appId}`, 'ok');
 
       // Pre-fill a guest userId
-      $('userId').value = 'guest-' + Math.random().toString(36).slice(2, 10) + '-' + Date.now().toString(36);
+      el('userId').value = 'guest-' + Math.random().toString(36).slice(2, 10) + '-' + Date.now().toString(36);
       return true;
     }
 
@@ -318,7 +318,7 @@
 
     // ── 2. Register a guest device ───────────────────────────────
     function registerGuest() {
-      const userId = $('userId').value.trim() || ('guest-' + Date.now());
+      const userId = el('userId').value.trim() || ('guest-' + Date.now());
       currentUserId = userId;
       const deviceId = userId + '-' + Date.now();
       log(`Registering · userId=${userId} · deviceId=${deviceId}`, 'info');
@@ -330,11 +330,11 @@
         onSuccess: (msg) => {
           setBadge('sStatus_register', 'registered', 'ok');
           log('register onSuccess: ' + JSON.stringify(msg), 'ok');
-          $('btnUnregister').disabled = false;
-          $('btnConnect').disabled = false;
-          $('btnNewThread').disabled = false;
-          $('btnFetchThreads').disabled = false;
-          $('btnRegister').disabled = true;
+          el('btnUnregister').disabled = false;
+          el('btnConnect').disabled = false;
+          el('btnNewThread').disabled = false;
+          el('btnFetchThreads').disabled = false;
+          el('btnRegister').disabled = true;
           // Auto-connect after register (matches sample app pattern)
           attachMessageListener();
           connect();
@@ -353,14 +353,14 @@
           setBadge('sStatus_conn', 'disconnected', '');
           setBadge('sStatus_thread', 'none', '');
           log('Unregistered', 'ok');
-          $('btnRegister').disabled = false;
-          $('btnUnregister').disabled = true;
-          $('btnConnect').disabled = true;
-          $('btnDisconnect').disabled = true;
-          $('btnNewThread').disabled = true;
-          $('btnFetchThreads').disabled = true;
-          $('composer').disabled = true;
-          $('btnSend').disabled = true;
+          el('btnRegister').disabled = false;
+          el('btnUnregister').disabled = true;
+          el('btnConnect').disabled = true;
+          el('btnDisconnect').disabled = true;
+          el('btnNewThread').disabled = true;
+          el('btnFetchThreads').disabled = true;
+          el('composer').disabled = true;
+          el('btnSend').disabled = true;
           activeThreadId = null;
         },
         onFailure: (err) => log('unregister onFailure: ' + JSON.stringify(err), 'err')
@@ -377,12 +377,12 @@
           const code = (statusCode && typeof statusCode === 'object') ? (statusCode.code ?? statusCode.status) : statusCode;
           if (code === 1 || code === 'CONNECTED' || code === 'connected') {
             setBadge('sStatus_conn', 'connected', 'ok');
-            $('btnConnect').disabled = true;
-            $('btnDisconnect').disabled = false;
+            el('btnConnect').disabled = true;
+            el('btnDisconnect').disabled = false;
           } else if (code === 0 || code === 'DISCONNECTED' || code === 'disconnected') {
             setBadge('sStatus_conn', 'disconnected', 'warn');
-            $('btnConnect').disabled = false;
-            $('btnDisconnect').disabled = true;
+            el('btnConnect').disabled = false;
+            el('btnDisconnect').disabled = true;
           } else {
             setBadge('sStatus_conn', String(code), 'info');
           }
@@ -444,8 +444,8 @@
             log('createThread onSuccess: ' + JSON.stringify(thread).slice(0, 200), 'ok');
             activeThreadId = thread?.threadId || thread?.id || thread;
             setBadge('sStatus_thread', String(activeThreadId).slice(0, 12) + '…', 'ok');
-            $('composer').disabled = false;
-            $('btnSend').disabled = false;
+            el('composer').disabled = false;
+            el('btnSend').disabled = false;
             addMsg('Thread created · ' + activeThreadId, 'sys');
           },
           onFailure: (err) => log('createThread onFailure: ' + JSON.stringify(err), 'err')
@@ -469,7 +469,7 @@
 
     // ── 5. Send a message ────────────────────────────────────────
     function sendMessage() {
-      const text = $('composer').value.trim();
+      const text = el('composer').value.trim();
       if (!text) return;
       if (!activeThreadId) {
         log('No active thread — click "Create thread" first', 'warn');
@@ -487,7 +487,7 @@
           onSuccess: (resp) => {
             log('publishMessage onSuccess: ' + JSON.stringify(resp).slice(0, 200), 'ok');
             addMsg(text, 'out', 'you');
-            $('composer').value = '';
+            el('composer').value = '';
           },
           onFailure: (err) => log('publishMessage onFailure: ' + JSON.stringify(err), 'err')
         });
@@ -501,14 +501,14 @@
       if (!preflight()) return;
       if (!startup()) return;
 
-      $('btnRegister').addEventListener('click', registerGuest);
-      $('btnUnregister').addEventListener('click', unregister);
-      $('btnConnect').addEventListener('click', connect);
-      $('btnDisconnect').addEventListener('click', disconnect);
-      $('btnNewThread').addEventListener('click', createThread);
-      $('btnFetchThreads').addEventListener('click', fetchThreads);
-      $('btnSend').addEventListener('click', sendMessage);
-      $('composer').addEventListener('keydown', (e) => { if (e.key === 'Enter') sendMessage(); });
+      el('btnRegister').addEventListener('click', registerGuest);
+      el('btnUnregister').addEventListener('click', unregister);
+      el('btnConnect').addEventListener('click', connect);
+      el('btnDisconnect').addEventListener('click', disconnect);
+      el('btnNewThread').addEventListener('click', createThread);
+      el('btnFetchThreads').addEventListener('click', fetchThreads);
+      el('btnSend').addEventListener('click', sendMessage);
+      el('composer').addEventListener('keydown', (e) => { if (e.key === 'Enter') sendMessage(); });
 
       log('Ready — click "Register guest" to begin', 'info');
     });
