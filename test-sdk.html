@@ -451,7 +451,11 @@
           onFailure: (err) => log('createThread onFailure: ' + JSON.stringify(err), 'err')
         });
       } catch (e) {
-        log('createThread() threw: ' + (e?.message || e) + ' — try alternate signature', 'err');
+        const detail = (e && typeof e === 'object')
+          ? (e.message || JSON.stringify(e, Object.getOwnPropertyNames(e)))
+          : String(e);
+        log('createThread() threw: ' + detail, 'err');
+        console.error('createThread() exception object:', e);
       }
     }
 
