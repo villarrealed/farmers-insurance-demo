@@ -219,7 +219,9 @@
     </div>
   </div>
 
-  <!-- Webex Connect SDK + tenant config -->
+  <!-- Webex Connect SDK + tenant config
+       NOTE: SDK has a legacy jQuery dependency (uses $.ajax internally) -->
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
   <script src="sdk-vendor/imi-environments.js"></script>
   <script src="sdk-vendor/webex-connect-sdk.min.js"></script>
 
