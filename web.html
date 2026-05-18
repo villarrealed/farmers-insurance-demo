@@ -2349,26 +2349,10 @@
         CustomerEmail: profile.email || '',
         CustomerPhone: phone,
         // Call context
-        CallReason: reason,
-        CallSource: 'Web Portal — Request Callback',
-        CallbackOrigin: window.location.hostname,
-        RequestedAt: new Date().toISOString(),
+        CallBackReason: reason,
+        CallBackMessage: 'Web Portal — Request Callback',
         // Policy context
-        PolicyNumber: policy.number || '',
-        PolicyType: policy.type || 'Auto',
-        PolicyStatus: policy.status || '',
-        PremiumAmount: policy.premium ? String(policy.premium) : '',
-        RenewalDate: policy.renewalDate || '',
-        // Vehicle context (primary)
-        VehicleYear: vehicle.year ? String(vehicle.year) : '',
-        VehicleMake: vehicle.make || '',
-        VehicleModel: vehicle.model || '',
-        VehicleVin: vehicle.vin || '',
-        // Agent assignment
-        AssignedAgent: agent.name || '',
-        AssignedAgentPhone: agent.phone || '',
-        // JDS linkage (so agent's Customer Journey widget can find this person)
-        JdsPersonId: localStorage.getItem('farmers_jds_person_id') || ''
+        ID: policy.number || ''
       };
       
       // Strip blank values so CAD doesn't show empty fields
