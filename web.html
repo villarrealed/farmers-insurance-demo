@@ -2406,15 +2406,25 @@
         statusEl.textContent = '✓ Callback requested — your phone will ring shortly!';
         statusEl.className = 'cb-status success';
         showToast('Your phone will ring shortly!');
+        // Rich JDS event so the agent's Customer Journey widget shows full context
         jdsPostEvent('action:request-callback', {
           uiData: {
-            title: 'Request Callback',
+            title: 'Requested Callback',
             iconType: 'callback',
-            subTitle: 'Requested callback',
-            filterTags: ['callback', 'action']
+            subTitle: reason + ' — ' + (name || phone),
+            filterTags: ['callback', 'action', reason.toLowerCase().replace(/\s+/g, '-')]
           },
           callbackType: 'immediate',
-          reason: reason
+          reason: reason,
+          destination: phone,
+          customerName: name,
+          customerEmail: profile.email || '',
+          policyNumber: policy.number || '',
+          policyType: policy.type || '',
+          vehicle: vehicle.year ? (vehicle.year + ' ' + vehicle.make + ' ' + vehicle.model) : '',
+          assignedAgent: agent.name || '',
+          taskId: (data && (data.taskId || data.id)) || '',
+          requestedAt: new Date().toISOString()
         });
         setTimeout(closeCallback, 2500);
       })
