@@ -2118,7 +2118,7 @@
       <label for="cbPhone">Phone Number</label>
       <input id="cbPhone" type="tel" readonly style="font-family:monospace;">
 
-      <label for="cbName">Name</label>
+      <label for="cbName">Name <span style="font-weight:400;color:#888;font-size:.78rem;">(auto-filled from your profile)</span></label>
       <input id="cbName" type="text" readonly>
 
       <label for="cbReason">Reason</label>
@@ -2308,7 +2308,8 @@
     // ── Callback Feature ─────────────────────────────
     function openCallback() {
       const phone = localStorage.getItem('farmers_demo_phone') || '';
-      const name = document.getElementById('prechatName') ? document.getElementById('prechatName').value : '';
+      const profile = window._activeProfile;
+      const name = profile ? (profile._fullName || ((profile._firstName || '') + ' ' + (profile._lastName || '')).trim()) : '';
       document.getElementById('cbPhone').value = phone;
       document.getElementById('cbName').value = name;
       document.getElementById('cbStatus').textContent = '';
@@ -2430,6 +2431,7 @@
 
     function applyDemoProfile(p) {
       if (!p) return;
+      window._activeProfile = p;
       
       // ── Topbar ──
       const metaChip = document.querySelector('.meta-chip');
