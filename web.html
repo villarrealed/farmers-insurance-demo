@@ -2335,10 +2335,51 @@
       
       if (!phone) { showToast('Phone number required'); return; }
       
+      // ── Build CAD (Call-Associated Data) attributes for agent desktop ──
+      // These appear in the agent's CAD panel when the call is delivered.
+      // The WxCC flow must be configured to expose these keys via Screen Pop.
+      const profile = window._activeProfile || {};
+      const policy = profile.policy || {};
+      const vehicle = (profile.vehicles && profile.vehicles[0]) || {};
+      const agent = profile.agent || {};
+      
+      const attributes = {
+        // Customer identity
+        CustomerName: name || (profile._fullName || ''),
+        CustomerEmail: profile.email || '',
+        CustomerPhone: phone,
+        // Call context
+        CallReason: reason,
+        CallSource: 'Web Portal — Request Callback',
+        CallbackOrigin: window.location.hostname,
+        RequestedAt: new Date().toISOString(),
+        // Policy context
+        PolicyNumber: policy.number || '',
+        PolicyType: policy.type || 'Auto',
+        PolicyStatus: policy.status || '',
+        PremiumAmount: policy.premium ? String(policy.premium) : '',
+        RenewalDate: policy.renewalDate || '',
+        // Vehicle context (primary)
+        VehicleYear: vehicle.year ? String(vehicle.year) : '',
+        VehicleMake: vehicle.make || '',
+        VehicleModel: vehicle.model || '',
+        VehicleVin: vehicle.vin || '',
+        // Agent assignment
+        AssignedAgent: agent.name || '',
+        AssignedAgentPhone: agent.phone || '',
+        // JDS linkage (so agent's Customer Journey widget can find this person)
+        JdsPersonId: localStorage.getItem('farmers_jds_person_id') || ''
+      };
+      
+      // Strip blank values so CAD doesn't show empty fields
+      Object.keys(attributes).forEach(function(k) {
+        if (attributes[k] === '' || attributes[k] == null) delete attributes[k];
+      });
+      
       const body = {
         destination: phone,
         entryPointId: epId,
-        attributes: { CallReason: reason, Name: name },
+        attributes: attributes,
         outboundType: 'CALLBACK',
         mediaType: 'telephony',
         callback: {
