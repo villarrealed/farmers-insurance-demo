@@ -1491,6 +1491,17 @@
       <option value="Roadside">Roadside Assistance</option>
     </select>
 
+    <div style="display:flex;flex-direction:column;gap:10px;margin:6px 0 14px;">
+      <label style="display:flex;align-items:center;gap:10px;font-size:14px;color:#1c1c1e;cursor:pointer;">
+        <input id="cbRecordingConsent" type="checkbox" checked style="width:18px;height:18px;margin:0;flex-shrink:0;accent-color:#cc2228;">
+        <span>I consent to having my call recorded</span>
+      </label>
+      <label style="display:flex;align-items:center;gap:10px;font-size:14px;color:#1c1c1e;cursor:pointer;">
+        <input id="cbSmsOptIn" type="checkbox" checked style="width:18px;height:18px;margin:0;flex-shrink:0;accent-color:#cc2228;">
+        <span>I agree to receive text messages from Farmers</span>
+      </label>
+    </div>
+
     <button id="cbSubmitBtn" onclick="submitCallback()" style="background:linear-gradient(135deg,#cc2228,#991a1e);color:#fff;border:none;border-radius:14px;width:100%;height:50px;font-size:16px;font-weight:700;cursor:pointer;box-shadow:0 4px 16px rgba(204,34,40,.3);margin-top:4px;">
       📞 Call Me Now
     </button>
@@ -1723,13 +1734,20 @@ function submitCallback() {
   var phone = document.getElementById('cbPhone').value;
   var name = document.getElementById('cbName').value;
   var reason = document.getElementById('cbReason').value;
+  var recordingConsent = document.getElementById('cbRecordingConsent').checked;
+  var smsOptIn = document.getElementById('cbSmsOptIn').checked;
   
   if (!phone) { showToast('Phone number required'); return; }
   
   var body = {
     destination: phone,
     entryPointId: epId,
-    attributes: { CallReason: reason, Name: name },
+    attributes: {
+      CallReason: reason,
+      Name: name,
+      RecordingConsent: recordingConsent ? 'true' : 'false',
+      SmsOptIn: smsOptIn ? 'true' : 'false'
+    },
     outboundType: 'CALLBACK',
     mediaType: 'telephony',
     callback: {
@@ -1764,7 +1782,9 @@ function submitCallback() {
         filterTags: ['callback', 'action']
       },
       callbackType: 'immediate',
-      reason: reason
+      reason: reason,
+      recordingConsent: recordingConsent,
+      smsOptIn: smsOptIn
     });
     setTimeout(closeCallback, 2500);
   })

@@ -2130,6 +2130,17 @@
         <option value="Roadside">Roadside Assistance</option>
       </select>
 
+      <div style="margin-top:14px;display:flex;flex-direction:column;gap:8px;">
+        <label style="display:flex;align-items:center;gap:8px;font-weight:400;font-size:.88rem;margin:0;cursor:pointer;">
+          <input id="cbRecordingConsent" type="checkbox" checked style="width:auto;margin:0;flex-shrink:0;">
+          <span>I consent to having my call recorded</span>
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;font-weight:400;font-size:.88rem;margin:0;cursor:pointer;">
+          <input id="cbSmsOptIn" type="checkbox" checked style="width:auto;margin:0;flex-shrink:0;">
+          <span>I agree to receive text messages from Farmers</span>
+        </label>
+      </div>
+
       <div class="settings-actions">
         <button class="settings-cancel" onclick="closeCallback()">Cancel</button>
         <button class="settings-save" id="cbSubmitBtn" onclick="submitCallback()">Call Me Now</button>
@@ -2332,6 +2343,8 @@
       const phone = document.getElementById('cbPhone').value;
       const name = document.getElementById('cbName').value;
       const reason = document.getElementById('cbReason').value;
+      const recordingConsent = document.getElementById('cbRecordingConsent').checked;
+      const smsOptIn = document.getElementById('cbSmsOptIn').checked;
       
       if (!phone) { showToast('Phone number required'); return; }
       
@@ -2351,6 +2364,9 @@
         // Call context
         CallBackReason: reason,
         CallBackMessage: 'Web Portal — Request Callback',
+        // Consent (CAD strings — WxCC treats CAD as strings)
+        RecordingConsent: recordingConsent ? 'true' : 'false',
+        SmsOptIn: smsOptIn ? 'true' : 'false',
         // Policy context
         ID: policy.number || ''
       };
@@ -2403,6 +2419,8 @@
           destination: phone,
           customerName: name,
           customerEmail: profile.email || '',
+          recordingConsent: recordingConsent,
+          smsOptIn: smsOptIn,
           policyNumber: policy.number || '',
           policyType: policy.type || '',
           vehicle: vehicle.year ? (vehicle.year + ' ' + vehicle.make + ' ' + vehicle.model) : '',
