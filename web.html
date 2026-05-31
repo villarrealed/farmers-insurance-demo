@@ -2349,6 +2349,7 @@
       const reason = document.getElementById('cbReason').value;
       const recordingConsent = document.getElementById('cbRecordingConsent').checked;
       const smsOptIn = document.getElementById('cbSmsOptIn').checked;
+      const aiConsent = document.getElementById('cbAiConsent').checked;
       
       if (!phone) { showToast('Phone number required'); return; }
       
@@ -2371,6 +2372,7 @@
         // Consent (CAD strings — WxCC treats CAD as strings)
         RecordingConsent: recordingConsent ? 'true' : 'false',
         SmsOptIn: smsOptIn ? 'true' : 'false',
+        AiConsent: aiConsent ? 'true' : 'false',
         // Policy context
         ID: policy.number || ''
       };

@@ -1740,6 +1740,7 @@ function submitCallback() {
   var reason = document.getElementById('cbReason').value;
   var recordingConsent = document.getElementById('cbRecordingConsent').checked;
   var smsOptIn = document.getElementById('cbSmsOptIn').checked;
+  var aiConsent = document.getElementById('cbAiConsent').checked;
   
   if (!phone) { showToast('Phone number required'); return; }
   
@@ -1750,7 +1751,8 @@ function submitCallback() {
       CallReason: reason,
       Name: name,
       RecordingConsent: recordingConsent ? 'true' : 'false',
-      SmsOptIn: smsOptIn ? 'true' : 'false'
+      SmsOptIn: smsOptIn ? 'true' : 'false',
+      AiConsent: aiConsent ? 'true' : 'false'
     },
     outboundType: 'CALLBACK',
     mediaType: 'telephony',
