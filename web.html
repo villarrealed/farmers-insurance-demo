@@ -2329,6 +2329,9 @@
       document.getElementById('cbName').value = name;
       document.getElementById('cbStatus').textContent = '';
       document.getElementById('cbStatus').className = 'cb-status';
+      document.getElementById('cbRecordingConsent').checked = true;
+      document.getElementById('cbSmsOptIn').checked = true;
+      document.getElementById('cbAiConsent').checked = true;
       document.getElementById('callbackOverlay').classList.add('open');
     }
 
@@ -2417,8 +2420,8 @@
           uiData: {
             title: 'Requested Callback',
             iconType: 'callback',
-            subTitle: reason + ' — ' + (name || phone),
-            filterTags: ['callback', 'action', reason.toLowerCase().replace(/\s+/g, '-')]
+            subTitle: reason + ' — ' + (name || phone) + (aiConsent ? ' · AI Assisted' : ' · No AI Consent'),
+            filterTags: ['callback', 'action', reason.toLowerCase().replace(/\s+/g, '-'), aiConsent ? 'ai-consent' : 'no-ai-consent']
           },
           callbackType: 'immediate',
           reason: reason,
